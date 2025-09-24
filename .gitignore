@@ -35,3 +35,5 @@ public/uploads.zip
 .env
 public/all
 
+partzone_db_backup.sql
+*.sql
