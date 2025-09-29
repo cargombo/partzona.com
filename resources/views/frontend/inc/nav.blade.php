@@ -615,21 +615,18 @@
                                         </a>
                                     </li>
                                 @endforeach
-                                <li class="list-inline-item mr-0 position-relative dropdown">
-                                    <span
-                                        class="fs-13 px-3 py-3 c-pointer text-capitalize d-inline-block fw-700 {{ $nav_txt_color }} header_menu_links hov-bg-black-10 dropdown-toggle d-flex align-items-center gap-1"
-                                        data-toggle="dropdown">
-                                        {{ translate('Explore') }}
-                                    </span>
-                                    <ul class="dropdown-menu text-left mt-0 shadow-lg rounded-0 border-0"
-                                        >
-                                        <li><a class="dropdown-item {{ Request::is('flash-deals') ? 'active' : '' }} fs-13 px-3 py-2"
-                                               href="/flash-deals">{{ translate('Flash Sale') }}</a></li>
-                                        <li><a class="dropdown-item {{ Request::is('todays-deal') ? 'active' : '' }} fs-13 px-3 py-2"
-                                               href="/todays-deal">{{ translate('Todays Deal') }}</a></li>
-                                        <li><a class="dropdown-item {{ Request::is('best-selling') ? 'active' : '' }} fs-13 px-3 py-2"
-                                               href="/best-selling">{{ translate('Best Selling') }}</a></li>
-                                    </ul>
+                                <li class="list-inline-item mr-0">
+                                    <a class="fs-13 px-3 py-3 d-inline-block fw-700
+                                           {{ $nav_txt_color }} header_menu_links hov-bg-black-10
+                                            @if (request()->is('/flash-deals')) active @endif"
+                                            href="/flash-deals">{{ translate('Flash Sale') }}
+                                    </a>
+                                </li>
+                                <li class="list-inline-item mr-0"><a class="fs-13 px-3 py-3 d-inline-block fw-700
+                                           {{ $nav_txt_color }} header_menu_links hov-bg-black-10
+                                            @if ($currentUrl == $link || ($link == 'todays-deal' && $currentUrl == $baseUrl)) active @endif"
+                                        href="/todays-deal">{{ translate('Todays Deal') }}
+                                    </a>
                                 </li>
                             @endif
                         </ul>
