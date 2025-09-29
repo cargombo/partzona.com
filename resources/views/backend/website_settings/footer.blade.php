@@ -49,7 +49,7 @@
     			                <div class="form-group">
     								<label>{{ translate('Footer description') }} ({{ translate('Translatable') }})</label>
     								<input type="hidden" name="types[][{{ $lang }}]" value="footer_description">
-    								<textarea class="form-control" name="footer_description" rows="6" placeholder="Type.." >{{ get_setting('footer_description',null,$lang); }}</textarea>
+    								<textarea class="form-control" name="footer_description" rows="6" placeholder="Type.." >{{ get_setting('footer_description',null,$lang) }}</textarea>
     							</div>
 								<!-- Update Button -->
 								<div class="mt-4 text-right">
