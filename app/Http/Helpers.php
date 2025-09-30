@@ -868,7 +868,6 @@ function translate($key, $lang = null, $addslashes = false)
     }
 
     $lang_key = preg_replace('/[^A-Za-z0-9\_]/', '', str_replace(' ', '_', strtolower($key)));
-
     $translations_en = Cache::rememberForever('translations-en', function () {
         return Translation::where('lang', 'en')->pluck('lang_value', 'lang_key')->toArray();
     });
@@ -889,6 +888,7 @@ function translate($key, $lang = null, $addslashes = false)
     if (isset($translation_locale[$lang_key])) {
         return $addslashes ? addslashes(trim($translation_locale[$lang_key])) : trim($translation_locale[$lang_key]);
     }
+
 
     // return default lang if session lang not found
     $translations_default = Cache::rememberForever('translations-' . env('DEFAULT_LANGUAGE', 'en'), function () {

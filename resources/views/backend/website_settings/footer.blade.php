@@ -15,7 +15,7 @@
         @foreach (get_all_active_language() as $key => $language)
             <li class="nav-item">
                 <a class="nav-link text-reset @if ($language->code == $lang) active @endif py-3" href="{{ route('website.footer', ['lang'=> $language->code] ) }}">
-                    <img src="{{ static_asset('assets/img/flags/'.$language->code.'.png') }}" height="11" class="mr-1">
+                    <img src="{{ static_asset('assets/img/flags/'.$language->code.'.png') }}" height="11" class="mr-1">1
                     <span>{{$language->name}}</span>
                 </a>
             </li>
@@ -49,7 +49,7 @@
     			                <div class="form-group">
     								<label>{{ translate('Footer description') }} ({{ translate('Translatable') }})</label>
     								<input type="hidden" name="types[][{{ $lang }}]" value="footer_description">
-    								<textarea class="form-control" name="footer_description" rows="6" placeholder="Type.." >{{ get_setting('footer_description',null,$lang); }}</textarea>
+    								<textarea class="form-control" name="footer_description" rows="6" placeholder="Type.." >{{ get_setting('footer_description',null,$lang) }}</textarea>
     							</div>
 								<!-- Update Button -->
 								<div class="mt-4 text-right">
