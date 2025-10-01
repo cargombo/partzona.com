@@ -10,7 +10,7 @@ class TaobaoAuthService
 {
     private static string  $appKey = "503494";
     private static string  $appSecret = "6irVZUUB5Va5BwdRPFrjbLenkWhbf5OF";
-    private static string  $code = "2_503494_cDRo7qGFaxVUFW2u2MY5ixQo157";
+    private static string  $code = "2_503494_Gnyxr6AdTkAXir8uBB8A2p45156";
 
     /**
      * Access Token yarat və saxla
@@ -19,15 +19,12 @@ class TaobaoAuthService
     {
         // Token yaradırıq
         $response = self::createAccessToken();
-
         if (isset($response['code']) && $response['code'] !== '0') {
             throw new Exception("Taobao Error: " . $response['message']);
         }
 
-        // Köhnə token-ları deaktiv edirik
         TaobaoToken::deactivateOldTokens($response['seller_id']);
 
-        // Yeni token saxlayırıq
         $token = TaobaoToken::create([
             'access_token' => $response['access_token'],
             'refresh_token' => $response['refresh_token'],
@@ -106,7 +103,6 @@ class TaobaoAuthService
     public static function getValidToken()
     {
         $token = TaobaoToken::getActiveToken();
-
         if (!$token) {
             $token = self::createAndSaveAccessToken();
         }
@@ -118,10 +114,8 @@ class TaobaoAuthService
         if ($token->isRefreshTokenValid()) {
             $refreshedData = self::refreshAccessToken($token->refresh_token);
 
-            // Köhnə token-u deaktiv et
             $token->update(['is_active' => false]);
 
-            // Yeni token saxla
             $newToken = TaobaoToken::create([
                 'access_token' => $refreshedData['access_token'],
                 'refresh_token' => $refreshedData['refresh_token'] ?? $token->refresh_token,

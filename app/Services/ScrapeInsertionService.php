@@ -143,75 +143,39 @@ class ScrapeInsertionService
 
     public static function insertProduct($slug)
     {
-
-        $product = Product::select('id', 'scraped_item_id', 'scraped_item_url', 'scraped_date', 'category_id')->where('auction_product', 0)
+        $product = Product::select('id', 'scraped_item_id', 'scraped_item_url', 'scraped_date', 'category_id', 'user_id')
+            ->where('auction_product', 0)
             ->where('slug', $slug)
             ->where('approved', 1)
             ->first();
 
-
+        if (!$product) {
+            return ['error' => 'Product not found'];
+        }
 
         try {
-//            $url        = "https://www.amazon.com/dp/$product->scraped_item_id?th=1";
-            $searchData = Taobao::scrapeProduct($product->scraped_item_id);
-            dd($searchData);
+            // Taobao-dan məhsul məlumatlarını çək
+            $response = Taobao::scrapeProduct($product->scraped_item_id);
 
-//            $searchData = Amazon::scrapeProduct($product->scraped_item_url);
-            $searchData = $searchData['data'];
-            if (count($searchData) == 0) {
-                return [];
+            if (!$response['success'] || !isset($response['data'])) {
+                return ['error' => 'Failed to fetch product data'];
             }
-            $description    = "";
-            $techSpecs      = "";
-            $details        = "";
-            $specifications = "";
-            $features       = "";
 
-            if (isset($searchData['techSpecs']) && count($searchData['techSpecs']) > 0) {
-                $techSpecs = "<h5>Technical Specifications</h5><ul>";
-                foreach ($searchData['details'] as $key => $value) {
-                    $techSpecs = "$techSpecs <li><span style='font-weight: bolder;'>$key:&nbsp;</span>$value</li>";
-                }
-                $techSpecs = "$techSpecs</ul>";
-            }
-            if (isset($searchData['features']) && count($searchData['features']) > 0) {
-                $features = "<h5>Features</h5><ul>";
-                foreach ($searchData['features'] as $key => $value) {
-                    $features = "$features <li>$value</li>";
-                }
-                $features = "$features</ul>";
-            }
-            if (isset($searchData['specifications']) && $searchData['specifications'] !== "") {
-                $specifications = "<h5>Specifications</h5><ul>";
-                foreach ($searchData['specifications'] as $key => $value) {
-                    $specifications = "$specifications <li><span style='font-weight: bolder;'>$key:&nbsp;</span>$value</li>";
-                }
-                $specifications = "$specifications</ul>";
-            }
-            if (isset($searchData['details']) && count($searchData['details']) > 0) {
-                $details = "<h5>Details</h5><ul>";
-                foreach ($searchData['details'] as $key => $value) {
-                    $details = "$details <li><span style='font-weight: bolder;'>$key:&nbsp;</span>$value</li>";
-                }
-                $details = "$details</ul>";
-            }
-            if (isset($searchData['description']) && $searchData['description'] !== "") {
-                $_description = $searchData['description'];
-                $description  = "$details $techSpecs <p>$_description</p>";
-            }
-            $price  = str_replace('$', '', $searchData['price']);
+            $searchData = $response['data'];
+
+            $price = $searchData['price'] ?? 0;
+            $promotionPrice = $searchData['promotion_price'] ?? $price;
+
             $photos = [];
-            if (count($searchData['images']) > 0) {
-                foreach ($searchData['images'] as $key => $image) {
-                    if ($key > 0) {
-                        $upload   = Upload::updateOrCreate(
-                            [
-                                'file_name' => $image, // Unique identifier (checks if exists)
-                            ],
+            if (isset($searchData['pic_urls']) && count($searchData['pic_urls']) > 0) {
+                foreach ($searchData['pic_urls'] as $key => $imageUrl) {
+                    if ($key > 0) { // İlk şəkil thumbnail kimi istifadə olunacaq
+                        $upload = Upload::updateOrCreate(
+                            ['file_name' => $imageUrl],
                             [
                                 'file_original_name' => null,
                                 'user_id'            => $product->user_id,
-                                'extension'          => 0,
+                                'extension'          => 'jpg',
                                 'type'               => 'image',
                                 'file_size'          => 0
                             ]
@@ -220,249 +184,95 @@ class ScrapeInsertionService
                     }
                 }
             }
-            $variationDisplayLabels = $searchData['twisterData']['variationDisplayLabels'] ?? [];
-            $variationValues        = $searchData['twisterData']['variationValues'] ?? [];
 
-//            dd($variationDisplayLabels,$variationValues);
-//
-            $colors         = [];
-            $attributes     = [];
-            $attribute_ids  = [];
-            $choice_options = [];
-            $i              = 0;
-            ksort($variationValues);
-            foreach ($variationValues as $key => $values) {
-                if ($key !== 'color_name') {
-                    // CHECK Attribute
-                    $attribute = Attribute::where('name', $variationDisplayLabels[$key])->where('key', $key)->first();
-                    if (!$attribute) {
-                        $attribute       = new Attribute();
-                        $attribute->name = $variationDisplayLabels[$key];
-                        $attribute->key  = $key;
-                        $attribute->save();
-                    }
-                    $attribute_ids[] = $attribute->id;
-
-                }
-                $_values = [];
-                foreach ($values as $value) {
-                    if ($key == 'color_name') {
-                        $_color  = Color::where('code', $value)->first();
-                        $__color = str_replace([" ", '/'], "-", $value);
-
-                        if (!$_color) {
-                            $_color = new Color();
-                        }
-                        $_color->name  = $value;
-                        $_color->image = $searchData['colors'][$value]['image'] ?? null;
-                        $_color->code  = $__color;
-                        $_color->save();
-                        $colors[] = $__color;
-                    } else {
-                        // CHECK Attribute Value
-                        $__value        = str_replace([" ", '/'], "-", $value);
-                        $_values[]      = $__value;
-                        $attributeValue = AttributeValue::where('attribute_id', $attribute->id)
-                            ->where('value', $__value)
-                            ->first();
-                        if (!$attributeValue) {
-                            $attributeValue               = new AttributeValue();
-                            $attributeValue->attribute_id = $attribute->id;
-                            $attributeValue->value        = $value;
-                            $attributeValue->save();
-                        }
-                    }
-                }
-                if ($key !== 'color_name') {
-                    $choice_options[$i] = [
-                        'attribute_id' => $attribute->id,
-                        'values'       => $_values
-                    ];
-                }
-                $i++;
+            $thumbnailImg = null;
+            if (isset($searchData['pic_urls'][0])) {
+                $thumbnail = Upload::updateOrCreate(
+                    ['file_name' => $searchData['pic_urls'][0]],
+                    [
+                        'file_original_name' => null,
+                        'user_id'            => $product->user_id,
+                        'extension'          => 'jpg',
+                        'type'               => 'image',
+                        'file_size'          => 0
+                    ]
+                );
+                $thumbnailImg = $thumbnail->id;
             }
-            $_attributes = $searchData['attributes'];
-            foreach ($_attributes as $_attribute) {
-                $scraped_item_id = $_attribute['asin'];
-                $productStock    = ProductStock::where('product_id', $product->id)->where('scraped_item_id',
-                    $scraped_item_id)->first();
-                if (!$productStock) {
-                    $productStock = new ProductStock();
-                }
 
-                $variant    = null;
-                $dimensions = $searchData['twisterData']['dimensions'];
-                sort($dimensions);
-                foreach ($dimensions as $dimension) {
-                    $variant = $variant ? $variant . "-" . $_attribute[$dimension] : $_attribute[$dimension];
+            $description = $searchData['description'] ?? '';
+
+            if (isset($searchData['sku_list']) && count($searchData['sku_list']) > 0) {
+                foreach ($searchData['sku_list'] as $sku) {
+                    $productStock = ProductStock::updateOrCreate(
+                        [
+                            'product_id' => $product->id,
+                            'sku'        => $sku['mp_skuId']
+                        ],
+                        [
+                            'scraped_item_id' => $searchData['mp_id'],
+                            'variant'         => 'default',
+                            'price'           => $sku['price'] / 100,
+                            'qty'             => $sku['quantity'],
+                            'image'           => null
+                        ]
+                    );
                 }
-                $variant                       = str_replace([" ", '/'], "-", $variant);
-                $productStock->product_id      = $product->id;
-                $productStock->scraped_item_id = $_attribute['asin'];
-                $productStock->variant         = $variant;
-                $productStock->sku             = $_attribute['asin'];
-                $productStock->price           = $price;
-                $productStock->qty             = 100;
-                $productStock->image           = $_attribute['image'] ?? null;
-                $productStock->datas           = $variationValues;
-                $productStock->save();
+            } else {
+                ProductStock::updateOrCreate(
+                    [
+                        'product_id' => $product->id,
+                        'sku'        => $searchData['mp_id']
+                    ],
+                    [
+                        'scraped_item_id' => $searchData['mp_id'],
+                        'variant'         => 'default',
+                        'price'           => $price / 100,
+                        'qty'             => $searchData['quantity'] ?? 0,
+                        'image'           => null
+                    ]
+                );
             }
-            $description = str_replace('›  See more product details', '', $description);
 
-            $product->description    = $description;
-            $product->photos         = implode(',', $photos);
-            $product->attributes     = json_encode($attribute_ids);
-            $product->colors         = json_encode($colors);
-            $product->choice_options = json_encode(empty($choice_options) ? [] : $choice_options);
-            $product->scraped_date   = now();
+            $product->name                = $searchData['title'];
+            $product->description         = $description;
+            $product->unit_price          = $promotionPrice / 100;
+            $product->purchase_price      = $price / 100;
+            $product->photos              = implode(',', $photos);
+            $product->thumbnail_img       = $thumbnailImg;
+            $product->current_stock       = $searchData['quantity'] ?? 0;
+            $product->scraped_date        = now();
+            $product->scraped_full_data   = json_encode($searchData);
+            $product->meta_title          = $searchData['title'];
+            $product->meta_description    = strip_tags($description);
+
+            if ($promotionPrice < $price) {
+                $discountAmount = $price - $promotionPrice;
+                $product->discount = $discountAmount / 100;
+                $product->discount_type = 'amount';
+            }
+
             $product->save();
 
-            $ProductTranslation = ProductTranslation::where('product_id', $product->id)->where('lang', 'en')->first();
-            if (!$ProductTranslation) {
-                $ProductTranslation = new ProductTranslation();
-            }
-            $ProductTranslation->product_id  = $product->id;
-            $ProductTranslation->name        = $searchData['title'];
-            $ProductTranslation->unit        = 'Pc';
-            $ProductTranslation->lang        = 'en';
-            $ProductTranslation->description = $description;
-            $ProductTranslation->save();
+            return [
+                'success' => true,
+                'product' => $product,
+                'message' => 'Product updated successfully'
+            ];
 
+        } catch (\Exception $e) {
+            \Log::error('Product insert error: ' . $e->getMessage(), [
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+                'product_id' => $product->id ?? null
+            ]);
 
-            return $product;
-
-            /**
-             * foreach ($searchData['colors'] as $color) {
-             *
-             * $_color   = Color::where('code', $color['color_name'])->first();
-             * $__color  = str_replace('/', '-', $color['color_name']);
-             * $__color  = str_replace(' ', '-', $__color);
-             * $colors[] = $__color;
-             *
-             * $category_ids = CategoryUtility::children_ids($product->category_id);
-             * $category_ids[] = $product->category_id;
-             *
-             * if (!$_color) {
-             * $_color = new Color();
-             * }
-             * $_color->name  = $__color;
-             * $_color->image = $color['image'];
-             * $_color->code  = $__color;
-             * $_color->save();
-             *
-             * if (count($searchData['sizes']) > 0) {
-             * $choice_options_for_stocks = [
-             * 'attribute_id' => 1,
-             * 'values'       => []
-             * ];
-             *
-             *
-             * foreach ($color['sizes'] as $size) {
-             * $scraped_item_id = $size['asin'];
-             *
-             * $__size  = str_replace('/', '-', $size['size']);
-             * $__size  = str_replace(' ', '-', $__size);
-             * $attributes[$__size] = $__size;
-             * $variant = $__color .'-'. $__size;
-             *
-             * $productStock               = ProductStock::where('product_id', $product->id)
-             * ->where('variant', $variant)
-             * ->first();
-             *
-             * $choice_options_for_stocks['values'][] = $size['size'];
-             * if (!$productStock) {
-             * $productStock = new ProductStock();
-             * }
-             * $attributeValue = AttributeValue::where('value', $__size)->first();
-             *
-             * if (!$attributeValue) {
-             * $attributeValue               = new AttributeValue();
-             * $attributeValue->attribute_id = 1;
-             * $attributeValue->value        = $__size;
-             * $attributeValue->save();
-             *
-             * }
-             *
-             * $productStock->product_id      = $product->id;
-             * $productStock->scraped_item_id = $scraped_item_id;
-             * $productStock->variant         = $variant;
-             * $productStock->sku             = $size['asin'];
-             * $productStock->price           = $price;
-             * $productStock->qty             = 100;
-             * $productStock->datas           = ['color' => $color, 'size' => $size];
-             *
-             * $productStock->attributes     = json_encode([1]);
-             * $productStock->colors         = json_encode($colors);
-             * $productStock->choice_options = json_encode(empty($choice_options_for_stocks) ? [] : [$choice_options_for_stocks]);
-             *
-             * $productStock->save();
-             * }
-             * }
-             * else {
-             * $scraped_item_id = $color['asin'];
-             * $productStock    = ProductStock::where('product_id', $product->id)->where('scraped_item_id',
-             * $scraped_item_id)->first();
-             * if (!$productStock) {
-             * $productStock = new ProductStock();
-             * }
-             *
-             * $productStock->product_id      = $product->id;
-             * $productStock->scraped_item_id = $scraped_item_id;
-             * $productStock->variant         = $__color;
-             * $productStock->sku             = $color['asin'];
-             * $productStock->price           = $price;
-             * $productStock->qty             = 100;
-             * $productStock->image           = $color['image'] ?? null;
-             * $productStock->datas           = ['color' => $color];
-             *
-             * $productStock->attributes     = json_encode([1]);
-             * $productStock->colors         = json_encode($colors);
-             * $productStock->choice_options = json_encode(empty($choice_options_for_stocks) ? [] : [$choice_options_for_stocks]);
-             *
-             * $productStock->save();
-             * }
-             * }
-             *
-             *
-             * $description = str_replace('›  See more product details', '', $description);
-             * $attributes = array_values($attributes);
-             * $choice_options['values'] = array_values($attributes);
-             *
-             * $product->description    = $description;
-             * $product->photos         = implode(',', $photos);
-             * $product->attributes     = json_encode([1]);
-             * $product->colors         = json_encode($colors);
-             * $product->choice_options = json_encode(empty($choice_options) ? [] : [$choice_options]);
-             * $product->scraped_date   = now();
-             * $product->save();
-             *
-             * $ProductTranslation = ProductTranslation::where('product_id', $product->id)->where('lang', 'en')->first();
-             * if (!$ProductTranslation) {
-             * $ProductTranslation = new ProductTranslation();
-             * }
-             * $ProductTranslation->product_id  = $product->id;
-             * $ProductTranslation->name        = $searchData['title'];
-             * $ProductTranslation->unit        = 'Pc';
-             * $ProductTranslation->lang        = 'en';
-             * $ProductTranslation->description = $description;
-             * $ProductTranslation->save();
-             *
-             *
-             * return $product;
-             **/
-
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'line' => $e->getLine()
+            ];
         }
-        catch (\Exception $e) {
-            dd($e->getMessage(), $e->getLine());
-            return [];
-        }
-
-        // Məhsul modelini yaradır və verilənlər bazasına əlavə edir
-        // productExists() metodu ilə məhsulun artıq mövcud olub-olmadığını yoxlayır
-        // Məhsul məlumatlarını düzgün formatda hazırlayır (adı, təsviri, qiyməti və s.)
-        // Əgər kateqoriya ID-si təqdim edilmişdirsə, məhsulu həmin kateqoriya ilə əlaqələndirir
-        // insertProductImages() və insertProductAttributes() metodlarını çağırır
-        // Əlavə edilmiş məhsulun ID-sini geri qaytarır
     }
 
     /**

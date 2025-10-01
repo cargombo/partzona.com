@@ -66,10 +66,23 @@ class Taobao
      */
     public static function scrapeProduct($item_id)
     {
-
+        $app_key = 503494;
+        $app_secret = '6irVZUUB5Va5BwdRPFrjbLenkWhbf5OF';
         $token = TaobaoAuthService::getValidToken();
-        dd($token);
 
+        $timestamp = round(microtime(true) * 1000);
+
+        $params = [
+            'access_token'       => $token,
+            'app_key'            => $app_key,
+            'item_id'            => $item_id,
+            'sign_method'        => 'hmac-sha256',
+            'timestamp'          => $timestamp,
+            'item_source_market' => 'CBU',
+        ];
+
+        $sign = self::generateSign($params, $app_secret, '/product/get', 'hmac-sha256');
+        $params['sign'] = $sign;
 
         $curl = curl_init();
 
@@ -82,18 +95,57 @@ class Taobao
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
             CURLOPT_CUSTOMREQUEST  => 'POST',
-            CURLOPT_POSTFIELDS     => '{"access_token":"37c66819338b4562e17675b8c5c4dbd0","app_key":"1234567","item_id":"652876415053","sign_method":"sha256","sign":"D13F2A03BE94D9AAE9F933FFA7B13E0A5AD84A3DAEBC62A458A3C382EC2E91EC","timestamp":"1759216051386","item_source_market":"CBU_MARKET"}',
+            CURLOPT_POSTFIELDS     => json_encode($params, JSON_UNESCAPED_UNICODE),
             CURLOPT_HTTPHEADER     => [
                 'Content-Type: application/json;charset=utf-8'
             ],
         ]);
 
         $response = curl_exec($curl);
-
         curl_close($curl);
-        echo $response;
 
+        // JSON formatında qaytarır (assoc = true olarsa array qaytarır, false olarsa object)
+        return json_decode($response, true);
     }
+
+    /**
+     * Signature yaradacaq funksiya
+     *
+     * @param array $params API parametrləri (sign daxil deyil)
+     * @param string $secret App secret
+     * @param string $apiName API endpoint, məsələn '/product/get'
+     * @param string $signMethod 'hmac-sha256', 'hmac' və ya 'md5'
+     * @return string
+     */
+    private static function generateSign(array $params, string $secret, string $apiName, string $signMethod = 'hmac-sha256'): string
+    {
+        // Parametrləri stringə çevir və sort et (ASCII order)
+        $params = array_map('strval', $params);
+        ksort($params, SORT_STRING);
+
+        // Concatenate key + value
+        $stringToSign = $apiName; // API adı başlanğıca əlavə olunur
+        foreach ($params as $key => $value) {
+            if ($value !== '') {
+                $stringToSign .= $key . $value;
+            }
+        }
+
+        // HMAC_SHA256 ilə sign yarat
+        if ($signMethod === 'hmac-sha256') {
+            $hash = hash_hmac('sha256', $stringToSign, $secret, false); // false → hex output
+        } elseif ($signMethod === 'hmac') {
+            $hash = hash_hmac('md5', $stringToSign, $secret, false);
+        } else { // md5
+            $hash = md5($secret . $stringToSign . $secret);
+        }
+
+        return strtoupper($hash);
+    }
+
+
+
+
 
 
 
