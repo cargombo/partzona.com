@@ -9,6 +9,40 @@ use App\Traits\PreventDemoModeChanges;
 class Product extends Model
 {
     use PreventDemoModeChanges;
+
+    protected $fillable = [
+        'name',
+        'description',
+        'unit_price',
+        'purchase_price',
+        'photos',
+        'thumbnail_img',
+        'current_stock',
+        'scraped_date',
+        'scraped_full_data',
+        'meta_title',
+        'meta_description',
+        'meta_img',
+        'choice_options',
+        'attributes',
+        'discount',
+        'discount_type',
+        'mp_id',
+        'colors',
+        'variant_product',
+        'slug',
+        'scraped_item_id',
+        'scraped_item_url',
+        'category_id',
+        'user_id',
+        'approved',
+        'published',
+        'auction_product',
+        'digital',
+        'scraped_basic_data',
+        'brand_id'
+    ];
+
     protected $casts = [
         'scraped_basic_data'    => 'array',
         'scraped_date'          => 'datetime',

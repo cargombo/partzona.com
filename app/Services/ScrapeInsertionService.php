@@ -20,6 +20,7 @@ use Carbon\Carbon;
 use App\Models\Attribute;
 use App\Models\AttributeCategory;
 use App\Utility\CategoryUtility;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Cache;
 class ScrapeInsertionService
@@ -155,15 +156,41 @@ class ScrapeInsertionService
 
         try {
             $response = Taobao::scrapeProduct($product->scraped_item_id);
+            dd($response);
+            \Log::info('Taobao API Response:', [
+                'success' => $response['success'] ?? false,
+                'has_data' => isset($response['data']),
+                'data_keys' => isset($response['data']) ? array_keys($response['data']) : []
+            ]);
+
             if (!$response['success'] || !isset($response['data'])) {
                 return ['error' => 'Failed to fetch product data'];
             }
 
             $searchData = $response['data'];
 
+            // Tərcümə ediləcək mətnləri topla
+            $textsToTranslate = [];
+            $textsToTranslate[] = $searchData['title'] ?? '';
+            $textsToTranslate[] = strip_tags($searchData['description'] ?? '');
+
+            // Ayırıcı ilə birləşdir - daha unikal ayırıcı
+            $separator = '#';
+            $combinedText = implode($separator, array_filter($textsToTranslate));
+
+            // Tərcümə et
+            $translatedText = self::translateText($combinedText, 'zh', 'az');
+
+            // Tərcümə edilmiş mətnləri ayır
+            $translatedParts = explode($separator, $translatedText);
+            $translatedTitle = trim($translatedParts[0] ?? $searchData['title']);
+            $translatedDescription = trim($translatedParts[1] ?? strip_tags($searchData['description'] ?? ''));
+
+            // Qiymətləri hesabla
             $price = isset($searchData['price']) ? $searchData['price'] / 100 : 0;
             $promotionPrice = isset($searchData['promotion_price']) ? $searchData['promotion_price'] / 100 : $price;
 
+            // Şəkilləri emal et
             $photos = [];
             $thumbnailImg = null;
 
@@ -198,15 +225,73 @@ class ScrapeInsertionService
                 }
             }
 
-            $description = $searchData['description'] ?? '';
-
             $choiceOptions = [];
             $attributeIds = [];
             $totalQuantity = 0;
 
+            // SKU variantlarını emal et
             if (isset($searchData['sku_list']) && is_array($searchData['sku_list']) && count($searchData['sku_list']) > 0) {
                 ProductStock::where('product_id', $product->id)->delete();
 
+                // Property adlarını və dəyərlərini topla
+                $propertyNamesToTranslate = [];
+                $propertyValuesToTranslate = [];
+
+                foreach ($searchData['sku_list'] as $sku) {
+                    if (isset($sku['properties']) && is_array($sku['properties'])) {
+                        foreach ($sku['properties'] as $prop) {
+                            $propId = $prop['prop_id'] ?? null;
+                            $propName = $prop['prop_name'] ?? null;
+                            $valueName = $prop['value_name'] ?? null;
+
+                            if ($propId && $propName && $valueName) {
+                                if (!isset($propertyNamesToTranslate[$propName])) {
+                                    $propertyNamesToTranslate[$propName] = $propName;
+                                }
+                                // Hər bir value_name-i ayrıca əlavə et (duplikatları sonra təmizləyəcəyik)
+                                $propertyValuesToTranslate[$valueName] = $valueName;
+                            }
+                        }
+                    }
+                }
+
+                // Property adlarını və dəyərlərini birlikdə tərcümə et
+                $propertyNameMapping = [];
+                $propertyValueMapping = [];
+
+                if (!empty($propertyNamesToTranslate) || !empty($propertyValuesToTranslate)) {
+                    $allPropertiesToTranslate = array_merge(
+                        array_values($propertyNamesToTranslate),
+                        array_values($propertyValuesToTranslate)
+                    );
+
+                    $propertyTextCombined = implode($separator, $allPropertiesToTranslate);
+                    $translatedPropertiesText = self::translateText($propertyTextCombined, 'zh', 'az');
+                    $translatedPropertiesParts = explode($separator, $translatedPropertiesText);
+
+                    // Tərcümə edilmiş adları və dəyərləri ayır
+                    $propertyNamesCount = count($propertyNamesToTranslate);
+                    $translatedPropertyNames = array_slice($translatedPropertiesParts, 0, $propertyNamesCount);
+                    $translatedPropertyValues = array_slice($translatedPropertiesParts, $propertyNamesCount);
+
+                    // Mapping yarat
+                    $originalPropertyNames = array_values($propertyNamesToTranslate);
+                    foreach ($originalPropertyNames as $index => $originalName) {
+                        $propertyNameMapping[$originalName] = trim($translatedPropertyNames[$index] ?? $originalName);
+                    }
+
+                    $originalPropertyValues = array_values($propertyValuesToTranslate);
+                    foreach ($originalPropertyValues as $index => $originalValue) {
+                        $propertyValueMapping[$originalValue] = trim($translatedPropertyValues[$index] ?? $originalValue);
+                    }
+
+                    \Log::info('Property translations:', [
+                        'name_mapping' => $propertyNameMapping,
+                        'value_mapping' => $propertyValueMapping
+                    ]);
+                }
+
+                // Properties-ləri qrupla (tərcümə edilmiş versiyalarla)
                 $groupedProperties = [];
 
                 foreach ($searchData['sku_list'] as $sku) {
@@ -217,14 +302,21 @@ class ScrapeInsertionService
                             $valueName = $prop['value_name'] ?? null;
 
                             if ($propId && $propName && $valueName) {
+                                // Tərcümə edilmiş adları istifadə et
+                                $translatedPropName = $propertyNameMapping[$propName] ?? $propName;
+                                $translatedValueName = $propertyValueMapping[$valueName] ?? $valueName;
+
                                 if (!isset($groupedProperties[$propId])) {
                                     $groupedProperties[$propId] = [
-                                        'name' => $propName,
+                                        'name' => $translatedPropName,
                                         'values' => []
                                     ];
                                 }
 
-                                $sanitizedValue = str_replace([' ', '（', '）', '(', ')'], ['-', '', '', '', ''], $valueName);
+                                // Sanitize - boşluqları və xüsusi simvolları təmizlə
+                                $sanitizedValue = preg_replace('/\s+/', '-', $translatedValueName);
+                                $sanitizedValue = str_replace(['（', '）', '(', ')', '[', ']', '【', '】'], '', $sanitizedValue);
+                                $sanitizedValue = trim($sanitizedValue, '-');
 
                                 if (!in_array($sanitizedValue, $groupedProperties[$propId]['values'])) {
                                     $groupedProperties[$propId]['values'][] = $sanitizedValue;
@@ -234,6 +326,7 @@ class ScrapeInsertionService
                     }
                 }
 
+                // Atributları yarat
                 foreach ($groupedProperties as $propId => $propData) {
                     $attribute = \App\Models\Attribute::firstOrCreate(
                         ['name' => $propData['name']],
@@ -260,6 +353,7 @@ class ScrapeInsertionService
                     ];
                 }
 
+                // ProductStock yaradırıq
                 foreach ($searchData['sku_list'] as $sku) {
                     $totalQuantity += (int)($sku['quantity'] ?? 0);
 
@@ -278,24 +372,28 @@ class ScrapeInsertionService
                         $skuImage = $skuUpload->id;
                     }
 
-                    $variantText = '';
                     $variantParts = [];
-
                     if (isset($sku['properties']) && is_array($sku['properties']) && count($sku['properties']) > 0) {
                         foreach ($sku['properties'] as $prop) {
                             $valueName = $prop['value_name'] ?? null;
                             if ($valueName) {
-                                $sanitizedValue = str_replace([' ', '（', '）', '(', ')'], ['-', '', '', '', ''], $valueName);
+                                $translatedValueName = $propertyValueMapping[$valueName] ?? $valueName;
+                                // Sanitize - eyni qaydalarla
+                                $sanitizedValue = preg_replace('/\s+/', '-', $translatedValueName);
+                                $sanitizedValue = str_replace(['（', '）', '(', ')', '[', ']', '【', '】'], '', $sanitizedValue);
+                                $sanitizedValue = trim($sanitizedValue, '-');
                                 $variantParts[] = $sanitizedValue;
                             }
                         }
-                        $variantText = implode('-', $variantParts);
                     }
+                    $variantText = !empty($variantParts) ? implode('-', $variantParts) : 'default';
+
+                    $skuValue = $sku['mp_skuId'] ?? null;
 
                     ProductStock::create([
                         'product_id' => $product->id,
-                        'variant'    => $variantText ?: 'default',
-                        'sku'        => $sku['mp_skuId'] ?? $sku['sku_id'] ?? uniqid(),
+                        'variant'    => $variantText,
+                        'sku'        => $skuValue,
                         'price'      => isset($sku['price']) ? $sku['price'] / 100 : $price,
                         'qty'        => $sku['quantity'] ?? 0,
                         'image'      => $skuImage
@@ -304,14 +402,16 @@ class ScrapeInsertionService
 
                 $product->variant_product = 1;
             } else {
+                // Variant olmayan məhsul
                 ProductStock::where('product_id', $product->id)->delete();
-
                 $totalQuantity = $searchData['quantity'] ?? 0;
+
+                $skuValue = $searchData['mp_skuId'] ?? null;
 
                 ProductStock::create([
                     'product_id' => $product->id,
                     'variant'    => '',
-                    'sku'        => $searchData['mp_id'] ?? uniqid(),
+                    'sku'        => $skuValue,
                     'price'      => $price,
                     'qty'        => $totalQuantity,
                     'image'      => null
@@ -320,6 +420,7 @@ class ScrapeInsertionService
                 $product->variant_product = 0;
             }
 
+            // Endirim hesabla
             $discount = 0;
             $discountType = null;
             if ($promotionPrice < $price) {
@@ -327,8 +428,12 @@ class ScrapeInsertionService
                 $discountType = 'amount';
             }
 
-            $product->name                = $searchData['title'];
-            $product->description         = $description;
+            $mpIdValue = $searchData['mp_id'];
+
+
+            // Məhsulu yenilə (tərcümə edilmiş mətnlərlə)
+            $product->name                = $translatedTitle;
+            $product->description         = $translatedDescription;
             $product->unit_price          = $promotionPrice;
             $product->purchase_price      = $price;
             $product->photos              = implode(',', $photos);
@@ -336,16 +441,20 @@ class ScrapeInsertionService
             $product->current_stock       = $totalQuantity;
             $product->scraped_date        = now();
             $product->scraped_full_data   = json_encode($searchData);
-            $product->meta_title          = $searchData['title'];
-            $product->meta_description    = strip_tags($description);
+            $product->meta_title          = $translatedTitle;
+            $product->meta_description    = $translatedDescription;
             $product->meta_img            = $thumbnailImg;
             $product->choice_options      = !empty($choiceOptions) ? json_encode($choiceOptions, JSON_UNESCAPED_UNICODE) : null;
             $product->attributes          = !empty($attributeIds) ? json_encode($attributeIds) : null;
             $product->discount            = $discount;
             $product->discount_type       = $discountType;
+            $product->mp_id               = $mpIdValue;
             $product->colors              = json_encode([]);
 
+
             $product->save();
+
+            dd($product->mp_id);
 
             return [
                 'success' => true,
@@ -366,6 +475,36 @@ class ScrapeInsertionService
                 'error' => $e->getMessage(),
                 'line' => $e->getLine()
             ];
+        }
+    }
+
+// Tərcümə funksiyası
+    private static function translateText($text, $sourceLang, $targetLang)
+    {
+        try {
+            $response = Http::timeout(30)->withHeaders([
+                'Content-Type' => 'application/json',
+                'Authorization' => 'Bearer yGPUjC5AFTC8VgJL1twOZ1hvytv9BkchTh3TgTadyG9tsH'
+            ])->post('https://amazon.ini.az/yandex-translate', [
+                'text' => $text,
+                'sourceLang' => $sourceLang,
+                'targetLang' => $targetLang
+            ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                return $data['translatedText'] ?? $text;
+            }
+
+            \Log::error('Translation API failed', [
+                'status' => $response->status(),
+                'body' => $response->body()
+            ]);
+
+            return $text;
+        } catch (\Exception $e) {
+            \Log::error('Translation error: ' . $e->getMessage());
+            return $text;
         }
     }
 

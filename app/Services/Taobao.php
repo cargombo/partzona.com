@@ -68,7 +68,9 @@ class Taobao
     {
         $app_key = 503494;
         $app_secret = '6irVZUUB5Va5BwdRPFrjbLenkWhbf5OF';
+
         $token = TaobaoAuthService::getValidToken();
+
 
         $timestamp = round(microtime(true) * 1000);
 
@@ -83,7 +85,6 @@ class Taobao
 
         $sign = self::generateSign($params, $app_secret, '/product/get', 'hmac-sha256');
         $params['sign'] = $sign;
-
         $curl = curl_init();
 
         curl_setopt_array($curl, [

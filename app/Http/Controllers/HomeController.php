@@ -357,6 +357,7 @@ class HomeController extends Controller
 
             $filtered_colors = count($colors) ? $colors : null;
 
+
             return view('frontend.product_details', compact('detailedProduct', 'product_queries', 'filtered_colors','total_query', 'reviews', 'review_status'));
         }
         abort(404);

@@ -49,6 +49,7 @@ class TaobaoAuthService
 
     public static function refreshAccessToken($refreshToken)
     {
+
         $timestamp = (string)(round(microtime(true) * 1000));
 
         $params = [
@@ -112,8 +113,8 @@ class TaobaoAuthService
         }
 
         if ($token->isRefreshTokenValid()) {
-            $refreshedData = self::refreshAccessToken($token->refresh_token);
 
+            $refreshedData = self::refreshAccessToken($token->refresh_token);
             $token->update(['is_active' => false]);
 
             $newToken = TaobaoToken::create([
