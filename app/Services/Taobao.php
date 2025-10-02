@@ -117,16 +117,32 @@ class Taobao
      * @param string $signMethod 'hmac-sha256', 'hmac' və ya 'md5'
      * @return string
      */
-    private static function generateSign(array $params, string $secret, string $apiName, string $signMethod = 'hmac-sha256'): string
+    public static function generateSign(array $params, string $secret, string $apiName, string $signMethod = 'hmac-sha256'): string
     {
         // Parametrləri stringə çevir və sort et (ASCII order)
-        $params = array_map('strval', $params);
+        $params = array_map(function($item) {
+            if (is_array($item)) {
+                return array_map(function($subItem) {
+                    if (is_array($subItem)) {
+                        return array_map(function($subSubItem) {
+                            return is_array($subSubItem) ? $subSubItem : strval($subSubItem);
+                        }, $subItem);
+                    }
+                    return strval($subItem);
+                }, $item);
+            }
+            return strval($item);
+        }, $params);
+
         ksort($params, SORT_STRING);
 
         // Concatenate key + value
         $stringToSign = $apiName; // API adı başlanğıca əlavə olunur
         foreach ($params as $key => $value) {
             if ($value !== '') {
+                if (is_array($value)) {
+                    $value = json_encode($value, JSON_UNESCAPED_UNICODE); // array-i string-ə çevir
+                }
                 $stringToSign .= $key . $value;
             }
         }
@@ -142,11 +158,5 @@ class Taobao
 
         return strtoupper($hash);
     }
-
-
-
-
-
-
 
 }

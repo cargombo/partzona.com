@@ -625,10 +625,9 @@
                             <div
                                 class="col text-center border-right border-bottom hov-scale-img has-transition hov-shadow-out z-1">
                                 <a href="{{ route('products.brand', $brand->slug) }}" class="d-block p-sm-3">
-                                    <img src="{{ isset($brand->brandLogo->file_name) ? my_asset($brand->brandLogo->file_name) : $brand->logo }}"
+                                    <img src="{{ $brand->logo }}"
                                         class="lazyload h-100 h-md-100px mx-auto has-transition p-2 p-sm-4 mw-100"
-                                        alt="{{ $brand->getTranslation('name') }}"
-                                        onerror="this.onerror=null;this.src='{{ static_asset('assets/img/placeholder.jpg') }}';">
+                                        alt="{{ $brand->getTranslation('name') }}">
                                     <p class="text-center text-dark fs-12 fs-md-14 fw-700 mt-2">
                                         {{ $brand->getTranslation('name') }}
                                     </p>

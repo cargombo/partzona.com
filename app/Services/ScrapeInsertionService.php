@@ -154,39 +154,20 @@ class ScrapeInsertionService
         }
 
         try {
-            // Taobao-dan məhsul məlumatlarını çək
             $response = Taobao::scrapeProduct($product->scraped_item_id);
-
             if (!$response['success'] || !isset($response['data'])) {
                 return ['error' => 'Failed to fetch product data'];
             }
 
             $searchData = $response['data'];
 
-            $price = $searchData['price'] ?? 0;
-            $promotionPrice = $searchData['promotion_price'] ?? $price;
+            $price = isset($searchData['price']) ? $searchData['price'] / 100 : 0;
+            $promotionPrice = isset($searchData['promotion_price']) ? $searchData['promotion_price'] / 100 : $price;
 
             $photos = [];
-            if (isset($searchData['pic_urls']) && count($searchData['pic_urls']) > 0) {
-                foreach ($searchData['pic_urls'] as $key => $imageUrl) {
-                    if ($key > 0) { // İlk şəkil thumbnail kimi istifadə olunacaq
-                        $upload = Upload::updateOrCreate(
-                            ['file_name' => $imageUrl],
-                            [
-                                'file_original_name' => null,
-                                'user_id'            => $product->user_id,
-                                'extension'          => 'jpg',
-                                'type'               => 'image',
-                                'file_size'          => 0
-                            ]
-                        );
-                        $photos[] = $upload->id;
-                    }
-                }
-            }
-
             $thumbnailImg = null;
-            if (isset($searchData['pic_urls'][0])) {
+
+            if (isset($searchData['pic_urls']) && is_array($searchData['pic_urls']) && count($searchData['pic_urls']) > 0) {
                 $thumbnail = Upload::updateOrCreate(
                     ['file_name' => $searchData['pic_urls'][0]],
                     [
@@ -198,59 +179,171 @@ class ScrapeInsertionService
                     ]
                 );
                 $thumbnailImg = $thumbnail->id;
+
+                foreach ($searchData['pic_urls'] as $key => $imageUrl) {
+                    $upload = Upload::updateOrCreate(
+                        ['file_name' => $imageUrl],
+                        [
+                            'file_original_name' => null,
+                            'user_id'            => $product->user_id,
+                            'extension'          => 'jpg',
+                            'type'               => 'image',
+                            'file_size'          => 0
+                        ]
+                    );
+
+                    if ($key > 0) {
+                        $photos[] = $upload->id;
+                    }
+                }
             }
 
             $description = $searchData['description'] ?? '';
 
-            if (isset($searchData['sku_list']) && count($searchData['sku_list']) > 0) {
+            $choiceOptions = [];
+            $attributeIds = [];
+            $totalQuantity = 0;
+
+            if (isset($searchData['sku_list']) && is_array($searchData['sku_list']) && count($searchData['sku_list']) > 0) {
+                ProductStock::where('product_id', $product->id)->delete();
+
+                $groupedProperties = [];
+
                 foreach ($searchData['sku_list'] as $sku) {
-                    $productStock = ProductStock::updateOrCreate(
-                        [
-                            'product_id' => $product->id,
-                            'sku'        => $sku['mp_skuId']
-                        ],
-                        [
-                            'scraped_item_id' => $searchData['mp_id'],
-                            'variant'         => 'default',
-                            'price'           => $sku['price'] / 100,
-                            'qty'             => $sku['quantity'],
-                            'image'           => null
-                        ]
-                    );
+                    if (isset($sku['properties']) && is_array($sku['properties'])) {
+                        foreach ($sku['properties'] as $prop) {
+                            $propId = $prop['prop_id'] ?? null;
+                            $propName = $prop['prop_name'] ?? null;
+                            $valueName = $prop['value_name'] ?? null;
+
+                            if ($propId && $propName && $valueName) {
+                                if (!isset($groupedProperties[$propId])) {
+                                    $groupedProperties[$propId] = [
+                                        'name' => $propName,
+                                        'values' => []
+                                    ];
+                                }
+
+                                $sanitizedValue = str_replace([' ', '（', '）', '(', ')'], ['-', '', '', '', ''], $valueName);
+
+                                if (!in_array($sanitizedValue, $groupedProperties[$propId]['values'])) {
+                                    $groupedProperties[$propId]['values'][] = $sanitizedValue;
+                                }
+                            }
+                        }
+                    }
                 }
-            } else {
-                ProductStock::updateOrCreate(
-                    [
+
+                foreach ($groupedProperties as $propId => $propData) {
+                    $attribute = \App\Models\Attribute::firstOrCreate(
+                        ['name' => $propData['name']],
+                        ['name' => $propData['name']]
+                    );
+                    $attributeIds[] = $attribute->id;
+
+                    foreach ($propData['values'] as $value) {
+                        \App\Models\AttributeValue::firstOrCreate(
+                            [
+                                'attribute_id' => $attribute->id,
+                                'value' => $value
+                            ],
+                            [
+                                'attribute_id' => $attribute->id,
+                                'value' => $value
+                            ]
+                        );
+                    }
+
+                    $choiceOptions[] = [
+                        'attribute_id' => (string)$attribute->id,
+                        'values' => $propData['values']
+                    ];
+                }
+
+                foreach ($searchData['sku_list'] as $sku) {
+                    $totalQuantity += (int)($sku['quantity'] ?? 0);
+
+                    $skuImage = null;
+                    if (isset($sku['pic_url']) && !empty($sku['pic_url'])) {
+                        $skuUpload = Upload::updateOrCreate(
+                            ['file_name' => $sku['pic_url']],
+                            [
+                                'file_original_name' => null,
+                                'user_id'            => $product->user_id,
+                                'extension'          => 'jpg',
+                                'type'               => 'image',
+                                'file_size'          => 0
+                            ]
+                        );
+                        $skuImage = $skuUpload->id;
+                    }
+
+                    $variantText = '';
+                    $variantParts = [];
+
+                    if (isset($sku['properties']) && is_array($sku['properties']) && count($sku['properties']) > 0) {
+                        foreach ($sku['properties'] as $prop) {
+                            $valueName = $prop['value_name'] ?? null;
+                            if ($valueName) {
+                                $sanitizedValue = str_replace([' ', '（', '）', '(', ')'], ['-', '', '', '', ''], $valueName);
+                                $variantParts[] = $sanitizedValue;
+                            }
+                        }
+                        $variantText = implode('-', $variantParts);
+                    }
+
+                    ProductStock::create([
                         'product_id' => $product->id,
-                        'sku'        => $searchData['mp_id']
-                    ],
-                    [
-                        'scraped_item_id' => $searchData['mp_id'],
-                        'variant'         => 'default',
-                        'price'           => $price / 100,
-                        'qty'             => $searchData['quantity'] ?? 0,
-                        'image'           => null
-                    ]
-                );
+                        'variant'    => $variantText ?: 'default',
+                        'sku'        => $sku['mp_skuId'] ?? $sku['sku_id'] ?? uniqid(),
+                        'price'      => isset($sku['price']) ? $sku['price'] / 100 : $price,
+                        'qty'        => $sku['quantity'] ?? 0,
+                        'image'      => $skuImage
+                    ]);
+                }
+
+                $product->variant_product = 1;
+            } else {
+                ProductStock::where('product_id', $product->id)->delete();
+
+                $totalQuantity = $searchData['quantity'] ?? 0;
+
+                ProductStock::create([
+                    'product_id' => $product->id,
+                    'variant'    => '',
+                    'sku'        => $searchData['mp_id'] ?? uniqid(),
+                    'price'      => $price,
+                    'qty'        => $totalQuantity,
+                    'image'      => null
+                ]);
+
+                $product->variant_product = 0;
+            }
+
+            $discount = 0;
+            $discountType = null;
+            if ($promotionPrice < $price) {
+                $discount = $price - $promotionPrice;
+                $discountType = 'amount';
             }
 
             $product->name                = $searchData['title'];
             $product->description         = $description;
-            $product->unit_price          = $promotionPrice / 100;
-            $product->purchase_price      = $price / 100;
+            $product->unit_price          = $promotionPrice;
+            $product->purchase_price      = $price;
             $product->photos              = implode(',', $photos);
             $product->thumbnail_img       = $thumbnailImg;
-            $product->current_stock       = $searchData['quantity'] ?? 0;
+            $product->current_stock       = $totalQuantity;
             $product->scraped_date        = now();
             $product->scraped_full_data   = json_encode($searchData);
             $product->meta_title          = $searchData['title'];
             $product->meta_description    = strip_tags($description);
-
-            if ($promotionPrice < $price) {
-                $discountAmount = $price - $promotionPrice;
-                $product->discount = $discountAmount / 100;
-                $product->discount_type = 'amount';
-            }
+            $product->meta_img            = $thumbnailImg;
+            $product->choice_options      = !empty($choiceOptions) ? json_encode($choiceOptions, JSON_UNESCAPED_UNICODE) : null;
+            $product->attributes          = !empty($attributeIds) ? json_encode($attributeIds) : null;
+            $product->discount            = $discount;
+            $product->discount_type       = $discountType;
+            $product->colors              = json_encode([]);
 
             $product->save();
 
@@ -264,7 +357,8 @@ class ScrapeInsertionService
             \Log::error('Product insert error: ' . $e->getMessage(), [
                 'line' => $e->getLine(),
                 'file' => $e->getFile(),
-                'product_id' => $product->id ?? null
+                'product_id' => $product->id ?? null,
+                'trace' => $e->getTraceAsString()
             ]);
 
             return [

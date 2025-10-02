@@ -499,7 +499,7 @@ class HomeController extends Controller
     {
 
 
-        $product = Product::find($request->id);
+        $product = Product::with('stocks')->find($request->id);
         $str = '';
         $quantity = 0;
         $tax = 0;
@@ -509,7 +509,6 @@ class HomeController extends Controller
             $str = $request['color'];
         }
         $str = str_replace(' ', '-', $str);
-//        dd($str);
 
 
         if (json_decode($product->choice_options) != null) {
@@ -536,7 +535,7 @@ class HomeController extends Controller
 
         $quantity = $product_stock->qty ?? 0;
         $max_limit = $product_stock->qty ?? 0;
-        $image = $product_stock->datas['image'];
+        $image = $product_stock->image ?? null;
 
         if ($quantity >= 1 && $product->min_qty <= $quantity) {
             $in_stock = 1;

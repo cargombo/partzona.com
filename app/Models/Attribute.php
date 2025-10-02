@@ -12,6 +12,8 @@ class Attribute extends Model
 
     protected $with = ['attribute_translations'];
 
+    protected $fillable = ['name', 'key'];
+
     public function getTranslation($field = '', $lang = false){
       $lang = $lang == false ? App::getLocale() : $lang;
       $attribute_translation = $this->attribute_translations->where('lang', $lang)->first();
