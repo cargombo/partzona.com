@@ -1258,7 +1258,8 @@ if (!function_exists('my_asset')) {
         if (config('filesystems.default') != 'local') {
             return Storage::disk(config('filesystems.default'))->url($path);
         }
-        return app('url')->asset($path, $secure);
+        $url = app('url')->asset($path, $secure);
+        return $url;
     }
 }
 

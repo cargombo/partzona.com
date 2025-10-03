@@ -42,7 +42,7 @@ class ScrapeInsertionService
                 $cacheKey .= '_page_' . $page;
             }
 
-            $cachedProducts = null;
+            $cachedProducts = Cache::get($cacheKey);
 
             if ($cachedProducts !== null) {
                return $cachedProducts;
@@ -51,7 +51,7 @@ class ScrapeInsertionService
                 $searchQuery = "{$keyword}&page={$page}";
             }
             $searchData = Taobao::scrapeSearch($keyword);
-            dd($searchData);
+            $products = [];
             if (!isset($searchData['data'])) {
                 return $products;
             }

@@ -54,7 +54,7 @@ class Turboaz extends Command
             $extension = pathinfo(parse_url($logoUrl, PHP_URL_PATH), PATHINFO_EXTENSION) ?: 'png';
             $filename = \Str::slug($brandName) . '_' . time() . '.' . $extension;
 
-            $path = 'uploads/brands/' . $filename;
+            $path = 'uploads' . $filename;
             Storage::disk('public')->put($path, $response->body());
 
             $upload = Upload::create([
