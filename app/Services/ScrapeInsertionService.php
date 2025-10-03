@@ -156,6 +156,7 @@ class ScrapeInsertionService
         try {
 
             $response = Taobao::scrapeProduct($product->scraped_item_id);
+//            dd($response);
             \Log::info('Taobao API Response:', [
                 'success' => $response['success'] ?? false,
                 'has_data' => isset($response['data']),
@@ -174,12 +175,12 @@ class ScrapeInsertionService
             $textsToTranslate[] = strip_tags($searchData['description'] ?? '');
 
             // Ayırıcı ilə birləşdir - daha unikal ayırıcı
-            $separator = '#';
+            $separator = '. ~';
             $combinedText = implode($separator, array_filter($textsToTranslate));
 
             // Tərcümə et
             $translatedText = self::translateText($combinedText, 'zh', 'az');
-
+//            dd($translatedText);
             // Tərcümə edilmiş mətnləri ayır
             $translatedParts = explode($separator, $translatedText);
             $translatedTitle = trim($translatedParts[0] ?? $searchData['title']);
@@ -263,11 +264,12 @@ class ScrapeInsertionService
                         array_values($propertyNamesToTranslate),
                         array_values($propertyValuesToTranslate)
                     );
-
+//                    $separator =
                     $propertyTextCombined = implode($separator, $allPropertiesToTranslate);
                     $translatedPropertiesText = self::translateText($propertyTextCombined, 'zh', 'az');
+                    $separator = '~';
                     $translatedPropertiesParts = explode($separator, $translatedPropertiesText);
-
+//                    dd($propertyTextCombined,$translatedPropertiesText,$translatedPropertiesParts);
                     // Tərcümə edilmiş adları və dəyərləri ayır
                     $propertyNamesCount = count($propertyNamesToTranslate);
                     $translatedPropertyNames = array_slice($translatedPropertiesParts, 0, $propertyNamesCount);
