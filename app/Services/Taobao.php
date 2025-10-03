@@ -47,6 +47,7 @@ class Taobao
 
         $response = curl_exec($curl);
         $err      = curl_error($curl);
+        dd($err);
 
         curl_close($curl);
 

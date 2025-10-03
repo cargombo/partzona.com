@@ -46,7 +46,6 @@ class SearchController extends Controller
             $category->deleted_at = now();
             $category->save();
         }
-
         $products = ScrapeInsertionService::searchAndInsertProducts($category->name,$category->id,$page);
         return view('frontend.product_listing', compact('products', 'query', 'category', 'categories', 'category_id', 'brand_id', 'sort_by', 'seller_id', 'min_price', 'max_price', 'attributes', 'selected_attribute_values', 'colors', 'selected_color'));
 

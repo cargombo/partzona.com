@@ -36,14 +36,13 @@ class ScrapeInsertionService
     public static function searchAndInsertProducts(string $keyword, $category_id, $page = null)
     {
         try {
-
             $cacheKey = $keyword;
 
            if ($page && is_numeric($page)) {
                 $cacheKey .= '_page_' . $page;
             }
 
-            $cachedProducts = Cache::get($cacheKey);
+            $cachedProducts = null;
 
             if ($cachedProducts !== null) {
                return $cachedProducts;
@@ -52,8 +51,7 @@ class ScrapeInsertionService
                 $searchQuery = "{$keyword}&page={$page}";
             }
             $searchData = Taobao::scrapeSearch($keyword);
-//            dd($searchData);
-            $products = [];
+            dd($searchData);
             if (!isset($searchData['data'])) {
                 return $products;
             }

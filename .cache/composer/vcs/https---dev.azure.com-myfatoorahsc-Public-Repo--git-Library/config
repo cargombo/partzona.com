@@ -1,0 +1,9 @@
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = true
+	ignorecase = true
+[remote "origin"]
+	url = https://dev.azure.com/myfatoorahsc/Public-Repo/_git/Library
+	fetch = +refs/*:refs/*
+	mirror = true

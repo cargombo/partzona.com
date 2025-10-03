@@ -16,7 +16,9 @@ RUN apt-get update && apt-get install -y \
     libfreetype6-dev \
     libjpeg62-turbo-dev \
     libpng-dev \
-    libgd-dev
+    libgd-dev \
+    python3 \
+    build-essential
 
 # Clear cache
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
@@ -41,8 +43,10 @@ COPY --chown=www-data:www-data . /var/www
 RUN composer install --no-dev --optimize-autoloader
 
 # Install Node.js dependencies and build assets
-RUN npm install
-RUN npm run production
+ENV PYTHON=/usr/bin/python3
+# Skip npm install and build for now - can be done after container starts
+# RUN npm install
+# RUN npm run production
 
 # Change current user to www
 USER www-data
