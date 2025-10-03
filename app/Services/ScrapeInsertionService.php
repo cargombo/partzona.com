@@ -36,13 +36,14 @@ class ScrapeInsertionService
     public static function searchAndInsertProducts(string $keyword, $category_id, $page = null)
     {
         try {
+
             $cacheKey = $keyword;
 
            if ($page && is_numeric($page)) {
                 $cacheKey .= '_page_' . $page;
             }
 
-            $cachedProducts = null;
+            $cachedProducts = Cache::get($cacheKey);
 
             if ($cachedProducts !== null) {
                return $cachedProducts;
@@ -51,7 +52,8 @@ class ScrapeInsertionService
                 $searchQuery = "{$keyword}&page={$page}";
             }
             $searchData = Taobao::scrapeSearch($keyword);
-            dd($searchData);
+//            dd($searchData);
+            $products = [];
             if (!isset($searchData['data'])) {
                 return $products;
             }
@@ -156,6 +158,7 @@ class ScrapeInsertionService
         try {
 
             $response = Taobao::scrapeProduct($product->scraped_item_id);
+//            dd($response);
             \Log::info('Taobao API Response:', [
                 'success' => $response['success'] ?? false,
                 'has_data' => isset($response['data']),
@@ -174,12 +177,12 @@ class ScrapeInsertionService
             $textsToTranslate[] = strip_tags($searchData['description'] ?? '');
 
             // Ayırıcı ilə birləşdir - daha unikal ayırıcı
-            $separator = '#';
+            $separator = '. ~';
             $combinedText = implode($separator, array_filter($textsToTranslate));
 
             // Tərcümə et
             $translatedText = self::translateText($combinedText, 'zh', 'az');
-
+//            dd($translatedText);
             // Tərcümə edilmiş mətnləri ayır
             $translatedParts = explode($separator, $translatedText);
             $translatedTitle = trim($translatedParts[0] ?? $searchData['title']);
@@ -263,11 +266,12 @@ class ScrapeInsertionService
                         array_values($propertyNamesToTranslate),
                         array_values($propertyValuesToTranslate)
                     );
-
+//                    $separator =
                     $propertyTextCombined = implode($separator, $allPropertiesToTranslate);
                     $translatedPropertiesText = self::translateText($propertyTextCombined, 'zh', 'az');
+                    $separator = '~';
                     $translatedPropertiesParts = explode($separator, $translatedPropertiesText);
-
+//                    dd($propertyTextCombined,$translatedPropertiesText,$translatedPropertiesParts);
                     // Tərcümə edilmiş adları və dəyərləri ayır
                     $propertyNamesCount = count($propertyNamesToTranslate);
                     $translatedPropertyNames = array_slice($translatedPropertiesParts, 0, $propertyNamesCount);
