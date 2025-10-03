@@ -10,7 +10,7 @@ class TaobaoAuthService
 {
     private static string  $appKey = "503494";
     private static string  $appSecret = "6irVZUUB5Va5BwdRPFrjbLenkWhbf5OF";
-    private static string  $code = "2_503494_Gnyxr6AdTkAXir8uBB8A2p45156";
+    private static string  $code = "2_503494_qeQMqUVs1ZKyl6YtqKrEV4EW238";
 
     /**
      * Access Token yarat və saxla
@@ -22,7 +22,6 @@ class TaobaoAuthService
         if (isset($response['code']) && $response['code'] !== '0') {
             throw new Exception("Taobao Error: " . $response['message']);
         }
-
         TaobaoToken::deactivateOldTokens($response['seller_id']);
 
         $token = TaobaoToken::create([
@@ -188,7 +187,6 @@ class TaobaoAuthService
 
         $response = curl_exec($curl);
         $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-
         curl_close($curl);
         return json_decode($response, true);
     }

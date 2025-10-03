@@ -150,13 +150,14 @@ class ScrapeInsertionService
             ->where('approved', 1)
             ->first();
 
+
         if (!$product) {
             return ['error' => 'Product not found'];
         }
 
         try {
+
             $response = Taobao::scrapeProduct($product->scraped_item_id);
-            dd($response);
             \Log::info('Taobao API Response:', [
                 'success' => $response['success'] ?? false,
                 'has_data' => isset($response['data']),
@@ -453,8 +454,6 @@ class ScrapeInsertionService
 
 
             $product->save();
-
-            dd($product->mp_id);
 
             return [
                 'success' => true,

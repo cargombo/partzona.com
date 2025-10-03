@@ -71,10 +71,15 @@ class TaobaoToken extends Model
      */
     public static function getActiveToken($sellerId = null)
     {
-        $query = self::where('is_active', true)
-            ->where('access_token_expires_at', '>', now());
-
-        return $query->latest()->first();
+        try {
+            $query = self::where('is_active', true)
+                ->where('access_token_expires_at', '>', now());
+            $result = $query->latest()->first();
+            return $result ?? null;
+        } catch (\Exception $e) {
+            dd($e->getMessage()); // <-- erroru göstər
+            return null;
+        }
     }
 
     /**

@@ -8,6 +8,39 @@ use App\Traits\PreventDemoModeChanges;
 class Order extends Model
 {
     use PreventDemoModeChanges;
+
+    protected $fillable = [
+        'combined_order_id',
+        'user_id',
+        'guest_id',
+        'seller_id',
+        'shipping_address',
+        'additional_info',
+        'shipping_type',
+        'order_from',
+        'pickup_point_id',
+        'carrier_id',
+        'delivery_status',
+        'payment_type',
+        'payment_status',
+        'payment_details',
+        'grand_total',
+        'coupon_discount',
+        'code',
+        'tracking_code',
+        'date',
+        'viewed',
+        'delivery_viewed',
+        'payment_status_viewed',
+        'commission_calculated',
+        'notified',
+        'consolidation',
+        'manual_payment',
+        'manual_payment_data',
+        'taobao_order_status',
+        'purchase_id',
+    ];
+
     public function orderDetails()
     {
         return $this->hasMany(OrderDetail::class);
