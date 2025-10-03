@@ -124,103 +124,103 @@
     </div>
 
     <!-- Flash Deal -->
-    @php
-        $flash_deal = get_featured_flash_deal();
-        $flash_deal_bg = get_setting('flash_deal_bg_color');
-        $flash_deal_bg_full_width = (get_setting('flash_deal_bg_full_width') == 1) ? true : false;
-        $flash_deal_banner_menu_text = ((get_setting('flash_deal_banner_menu_text') == 'dark') ||  (get_setting('flash_deal_banner_menu_text') == null)) ? 'text-dark' : 'text-white';
+{{--    @php--}}
+{{--        $flash_deal = get_featured_flash_deal();--}}
+{{--        $flash_deal_bg = get_setting('flash_deal_bg_color');--}}
+{{--        $flash_deal_bg_full_width = (get_setting('flash_deal_bg_full_width') == 1) ? true : false;--}}
+{{--        $flash_deal_banner_menu_text = ((get_setting('flash_deal_banner_menu_text') == 'dark') ||  (get_setting('flash_deal_banner_menu_text') == null)) ? 'text-dark' : 'text-white';--}}
 
-    @endphp
-    @if ($flash_deal != null)
-        <section class="mb-2 mb-md-3 mt-2 mt-md-3" style="background: {{ ($flash_deal_bg_full_width && $flash_deal_bg != null) ? $flash_deal_bg : '' }};" id="flash_deal">
-            <div class="container">
-                <div class="@if(!$flash_deal_bg_full_width) px-3 px-md-2rem @endif pb-3 pb-md-4" style="background: {{ $flash_deal_bg != null ? $flash_deal_bg : '#faf9f7' }};">
-                    <!-- Top Section -->
-                    <div class="d-flex flex-wrap align-items-baseline justify-content-center justify-content-sm-between mb-2 mb-md-3 pt-2 pt-md-3 position-relative">
-                        <!-- Title -->
-                        <h3 class="fs-16 fs-md-20 fw-700 mb-2 mb-sm-0">
-                            <span class="d-inline-block {{ $flash_deal_banner_menu_text }}">{{ translate('Flash Sale') }}</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="24" viewBox="0 0 16 24"
-                                 class="ml-3">
-                                <path id="Path_28795" data-name="Path 28795"
-                                      d="M30.953,13.695a.474.474,0,0,0-.424-.25h-4.9l3.917-7.81a.423.423,0,0,0-.028-.428.477.477,0,0,0-.4-.207H21.588a.473.473,0,0,0-.429.263L15.041,18.151a.423.423,0,0,0,.034.423.478.478,0,0,0,.4.2h4.593l-2.229,9.683a.438.438,0,0,0,.259.5.489.489,0,0,0,.571-.127L30.9,14.164a.425.425,0,0,0,.054-.469Z"
-                                      transform="translate(-15 -5)" fill="#fcc201" />
-                            </svg>
-                        </h3>
-                        <!-- Countdown -->
-                        <div class="aiz-count-down-box-div">
-                            <div class="aiz-count-down-box align-items-center mb-2 mb-lg-0" data-date="{{ date('Y/m/d H:i:s', $flash_deal->end_date) }}"></div>
-                        </div>
-                        <!-- Links -->
-                        <div>
-                            <div class="text-white d-flex align-items-center mb-0">
-                                <a href="{{ route('flash-deals') }}"
-                                   class="fs-10 fs-md-12 fw-700 has-transition @if ((get_setting('flash_deal_banner_menu_text') == 'light') && $flash_deal_bg_full_width && $flash_deal_bg != null) text-white hov-opacity-60  @else text-reset hov-opacity-60  @endif mr-3">{{ translate('View All Flash Sale') }}</a>
-                                <span class=" border-left border-soft-light border-width-2 pl-3">
-                                    <a href="{{ route('flash-deal-details', $flash_deal->slug) }}"
-                                       class="fs-10 fs-md-12 fw-700 has-transition @if ((get_setting('flash_deal_banner_menu_text') == 'light') && $flash_deal_bg_full_width && $flash_deal_bg != null) == 'light') text-white hov-opacity-60  @else text-reset hov-opacity-60 @endif">{{ translate('View All Products from This Flash Sale') }}</a>
-                                </span>
-                            </div>
-                        </div>
-                    </div>
+{{--    @endphp--}}
+{{--    @if ($flash_deal != null)--}}
+{{--        <section class="mb-2 mb-md-3 mt-2 mt-md-3" style="background: {{ ($flash_deal_bg_full_width && $flash_deal_bg != null) ? $flash_deal_bg : '' }};" id="flash_deal">--}}
+{{--            <div class="container">--}}
+{{--                <div class="@if(!$flash_deal_bg_full_width) px-3 px-md-2rem @endif pb-3 pb-md-4" style="background: {{ $flash_deal_bg != null ? $flash_deal_bg : '#faf9f7' }};">--}}
+{{--                    <!-- Top Section -->--}}
+{{--                    <div class="d-flex flex-wrap align-items-baseline justify-content-center justify-content-sm-between mb-2 mb-md-3 pt-2 pt-md-3 position-relative">--}}
+{{--                        <!-- Title -->--}}
+{{--                        <h3 class="fs-16 fs-md-20 fw-700 mb-2 mb-sm-0">--}}
+{{--                            <span class="d-inline-block {{ $flash_deal_banner_menu_text }}">{{ translate('Flash Sale') }}</span>--}}
+{{--                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="24" viewBox="0 0 16 24"--}}
+{{--                                 class="ml-3">--}}
+{{--                                <path id="Path_28795" data-name="Path 28795"--}}
+{{--                                      d="M30.953,13.695a.474.474,0,0,0-.424-.25h-4.9l3.917-7.81a.423.423,0,0,0-.028-.428.477.477,0,0,0-.4-.207H21.588a.473.473,0,0,0-.429.263L15.041,18.151a.423.423,0,0,0,.034.423.478.478,0,0,0,.4.2h4.593l-2.229,9.683a.438.438,0,0,0,.259.5.489.489,0,0,0,.571-.127L30.9,14.164a.425.425,0,0,0,.054-.469Z"--}}
+{{--                                      transform="translate(-15 -5)" fill="#fcc201" />--}}
+{{--                            </svg>--}}
+{{--                        </h3>--}}
+{{--                        <!-- Countdown -->--}}
+{{--                        <div class="aiz-count-down-box-div">--}}
+{{--                            <div class="aiz-count-down-box align-items-center mb-2 mb-lg-0" data-date="{{ date('Y/m/d H:i:s', $flash_deal->end_date) }}"></div>--}}
+{{--                        </div>--}}
+{{--                        <!-- Links -->--}}
+{{--                        <div>--}}
+{{--                            <div class="text-white d-flex align-items-center mb-0">--}}
+{{--                                <a href="{{ route('flash-deals') }}"--}}
+{{--                                   class="fs-10 fs-md-12 fw-700 has-transition @if ((get_setting('flash_deal_banner_menu_text') == 'light') && $flash_deal_bg_full_width && $flash_deal_bg != null) text-white hov-opacity-60  @else text-reset hov-opacity-60  @endif mr-3">{{ translate('View All Flash Sale') }}</a>--}}
+{{--                                <span class=" border-left border-soft-light border-width-2 pl-3">--}}
+{{--                                    <a href="{{ route('flash-deal-details', $flash_deal->slug) }}"--}}
+{{--                                       class="fs-10 fs-md-12 fw-700 has-transition @if ((get_setting('flash_deal_banner_menu_text') == 'light') && $flash_deal_bg_full_width && $flash_deal_bg != null) == 'light') text-white hov-opacity-60  @else text-reset hov-opacity-60 @endif">{{ translate('View All Products from This Flash Sale') }}</a>--}}
+{{--                                </span>--}}
+{{--                            </div>--}}
+{{--                        </div>--}}
+{{--                    </div>--}}
 
-                    <div class="row no-gutters align-items-center border" style="background: {{ $flash_deal_bg }};">
-                        <!-- Flash Deals Baner -->
-                        <div class="col-xxl-2 col-md-3 col-sm-4 col-5 h-150px h-md-200px h-lg-240px">
-                            <div class="h-100 w-100 w-xl-auto"
-                                 style="background-image: url('{{ uploaded_asset($flash_deal->banner) }}'); background-size: cover; background-position: center center;">
-                            </div>
-                        </div>
+{{--                    <div class="row no-gutters align-items-center border" style="background: {{ $flash_deal_bg }};">--}}
+{{--                        <!-- Flash Deals Baner -->--}}
+{{--                        <div class="col-xxl-2 col-md-3 col-sm-4 col-5 h-150px h-md-200px h-lg-240px">--}}
+{{--                            <div class="h-100 w-100 w-xl-auto"--}}
+{{--                                 style="background-image: url('{{ uploaded_asset($flash_deal->banner) }}'); background-size: cover; background-position: center center;">--}}
+{{--                            </div>--}}
+{{--                        </div>--}}
 
-                        <div class="col-xxl-10 col-md-9 col-sm-8 col-7">
-                            <!-- Flash Deals Products -->
-                            @php
-                                $flash_deal_products = get_flash_deal_products($flash_deal->id);
-                            @endphp
-                            <div class="aiz-carousel arrow-inactive-none arrow-x-0"
-                                 data-items="6" data-xxl-items="6" data-xl-items="5" data-lg-items="3.7" data-md-items="3"
-                                 data-sm-items="2.7" data-xs-items="1.5" data-arrows="true" data-dots="false">
-                                @foreach ($flash_deal_products as $key => $flash_deal_product)
-                                    <div class="carousel-box bg-white">
-                                        @if ($flash_deal_product->product != null && $flash_deal_product->product->published != 0)
-                                            @php
-                                                $product_url = route('product', $flash_deal_product->product->slug);
-                                                if ($flash_deal_product->product->auction_product == 1) {
-                                                    $product_url = route('auction-product', $flash_deal_product->product->slug);
-                                                }
-                                            @endphp
-                                            <div
-                                                class="h-150px h-md-200px h-lg-240px flash-deal-item position-relative text-center has-transition hov-shadow-out z-1">
-                                                <a href="{{ $product_url }}"
-                                                   class="d-block py-md-2 overflow-hidden hov-scale-img"
-                                                   title="{{ $flash_deal_product->product->getTranslation('name') }}">
-                                                    <!-- Image -->
-                                                    <img src="{{ get_image($flash_deal_product->product->thumbnail) }}"
-                                                         class="lazyload h-100px h-md-120px h-lg-140px mw-100 mx-auto has-transition"
-                                                         alt="{{ $flash_deal_product->product->getTranslation('name') }}"
-                                                         onerror="this.onerror=null;this.src='{{ static_asset('assets/img/placeholder.jpg') }}';">
-                                                    <!-- Price -->
-                                                    <div
-                                                        class="fs-10 fs-md-14 mt-2 text-center h-md-48px has-transition overflow-hidden pt-md-4 flash-deal-price lh-1-5">
-                                                        <span
-                                                            class="d-block text-primary fw-700">{{ home_discounted_base_price($flash_deal_product->product) }}</span>
-                                                        @if (home_base_price($flash_deal_product->product) != home_discounted_base_price($flash_deal_product->product))
-                                                            <del
-                                                                class="d-block fw-400 text-secondary">{{ home_base_price($flash_deal_product->product) }}</del>
-                                                        @endif
-                                                    </div>
-                                                </a>
-                                            </div>
-                                        @endif
-                                    </div>
-                                @endforeach
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-    @endif
+{{--                        <div class="col-xxl-10 col-md-9 col-sm-8 col-7">--}}
+{{--                            <!-- Flash Deals Products -->--}}
+{{--                            @php--}}
+{{--                                $flash_deal_products = get_flash_deal_products($flash_deal->id);--}}
+{{--                            @endphp--}}
+{{--                            <div class="aiz-carousel arrow-inactive-none arrow-x-0"--}}
+{{--                                 data-items="6" data-xxl-items="6" data-xl-items="5" data-lg-items="3.7" data-md-items="3"--}}
+{{--                                 data-sm-items="2.7" data-xs-items="1.5" data-arrows="true" data-dots="false">--}}
+{{--                                @foreach ($flash_deal_products as $key => $flash_deal_product)--}}
+{{--                                    <div class="carousel-box bg-white">--}}
+{{--                                        @if ($flash_deal_product->product != null && $flash_deal_product->product->published != 0)--}}
+{{--                                            @php--}}
+{{--                                                $product_url = route('product', $flash_deal_product->product->slug);--}}
+{{--                                                if ($flash_deal_product->product->auction_product == 1) {--}}
+{{--                                                    $product_url = route('auction-product', $flash_deal_product->product->slug);--}}
+{{--                                                }--}}
+{{--                                            @endphp--}}
+{{--                                            <div--}}
+{{--                                                class="h-150px h-md-200px h-lg-240px flash-deal-item position-relative text-center has-transition hov-shadow-out z-1">--}}
+{{--                                                <a href="{{ $product_url }}"--}}
+{{--                                                   class="d-block py-md-2 overflow-hidden hov-scale-img"--}}
+{{--                                                   title="{{ $flash_deal_product->product->getTranslation('name') }}">--}}
+{{--                                                    <!-- Image -->--}}
+{{--                                                    <img src="{{ get_image($flash_deal_product->product->thumbnail) }}"--}}
+{{--                                                         class="lazyload h-100px h-md-120px h-lg-140px mw-100 mx-auto has-transition"--}}
+{{--                                                         alt="{{ $flash_deal_product->product->getTranslation('name') }}"--}}
+{{--                                                         onerror="this.onerror=null;this.src='{{ static_asset('assets/img/placeholder.jpg') }}';">--}}
+{{--                                                    <!-- Price -->--}}
+{{--                                                    <div--}}
+{{--                                                        class="fs-10 fs-md-14 mt-2 text-center h-md-48px has-transition overflow-hidden pt-md-4 flash-deal-price lh-1-5">--}}
+{{--                                                        <span--}}
+{{--                                                            class="d-block text-primary fw-700">{{ home_discounted_base_price($flash_deal_product->product) }}</span>--}}
+{{--                                                        @if (home_base_price($flash_deal_product->product) != home_discounted_base_price($flash_deal_product->product))--}}
+{{--                                                            <del--}}
+{{--                                                                class="d-block fw-400 text-secondary">{{ home_base_price($flash_deal_product->product) }}</del>--}}
+{{--                                                        @endif--}}
+{{--                                                    </div>--}}
+{{--                                                </a>--}}
+{{--                                            </div>--}}
+{{--                                        @endif--}}
+{{--                                    </div>--}}
+{{--                                @endforeach--}}
+{{--                            </div>--}}
+{{--                        </div>--}}
+{{--                    </div>--}}
+{{--                </div>--}}
+{{--            </div>--}}
+{{--        </section>--}}
+{{--    @endif--}}
 
     <!-- Banner section 2 -->
     @php $homeBanner2Images = get_setting('home_banner2_images', null, $lang);   @endphp
@@ -307,52 +307,52 @@
     </div>
 
     <!-- Banner section 4, Top Sellers -->
-    @if (get_setting('vendor_system_activation') == 1)
-        @php
-            $best_selers = get_best_sellers(10);
-            $homeBanner4Images = get_setting('home_banner4_images', null, $lang);
-            $data_rows = 1;
-            $xxl_items = 5;
-            $xl_items = 4;
-            $lg_items = 3.4;
-            $md_items = 2.5;
-            if ($homeBanner4Images != null){
-                $data_rows = 2;
-                $xxl_items = 2;
-                $xl_items = 2;
-                $lg_items = 2;
-                $md_items = 3;
-            }
-        @endphp
-        @if (count($best_selers) > 0)
-        <section class="">
-            <div class="container">
-                <div class="row">
-                    <!-- Banner section 4 -->
-                    @if ($homeBanner4Images != null)
-                        <div class="col-xl-8 col-lg-6 mb-2 mb-md-3 mt-2 mt-md-3 d-none d-lg-block">
-                            @php
-                                $banner_4_imags = json_decode($homeBanner4Images);
-                                $home_banner4_links = get_setting('home_banner4_links', null, $lang);
-                            @endphp
-                            <div class="aiz-carousel overflow-hidden arrow-inactive-none arrow-dark arrow-x-0"
-                                data-items="1" data-arrows="true" data-dots="false" data-autoplay="true">
-                                @foreach ($banner_4_imags as $key => $value)
-                                    <div class="carousel-box overflow-hidden hov-scale-img">
-                                        <a href="{{ isset(json_decode($home_banner4_links, true)[$key]) ? json_decode($home_banner4_links, true)[$key] : '' }}"
-                                            class="d-block text-reset overflow-hidden" style="height: 650px;">
-                                            <img src="{{ static_asset('assets/img/placeholder-rect.jpg') }}"
-                                                data-src="{{ uploaded_asset($value) }}" alt="{{ env('APP_NAME') }} promo"
-                                                class="img-fit h-100 lazyload has-transition"
-                                                onerror="this.onerror=null;this.src='{{ static_asset('assets/img/placeholder-rect.jpg') }}';">
-                                        </a>
-                                    </div>
-                                @endforeach
-                            </div>
-                        </div>
-                    @endif
+{{--    @if (get_setting('vendor_system_activation') == 1)--}}
+{{--        @php--}}
+{{--            $best_selers = get_best_sellers(10);--}}
+{{--            $homeBanner4Images = get_setting('home_banner4_images', null, $lang);--}}
+{{--            $data_rows = 1;--}}
+{{--            $xxl_items = 5;--}}
+{{--            $xl_items = 4;--}}
+{{--            $lg_items = 3.4;--}}
+{{--            $md_items = 2.5;--}}
+{{--            if ($homeBanner4Images != null){--}}
+{{--                $data_rows = 2;--}}
+{{--                $xxl_items = 2;--}}
+{{--                $xl_items = 2;--}}
+{{--                $lg_items = 2;--}}
+{{--                $md_items = 3;--}}
+{{--            }--}}
+{{--        @endphp--}}
+{{--        @if (count($best_selers) > 0)--}}
+{{--        <section class="">--}}
+{{--            <div class="container">--}}
+{{--                <div class="row">--}}
+{{--                    <!-- Banner section 4 -->--}}
+{{--                    @if ($homeBanner4Images != null)--}}
+{{--                        <div class="col-xl-8 col-lg-6 mb-2 mb-md-3 mt-2 mt-md-3 d-none d-lg-block">--}}
+{{--                            @php--}}
+{{--                                $banner_4_imags = json_decode($homeBanner4Images);--}}
+{{--                                $home_banner4_links = get_setting('home_banner4_links', null, $lang);--}}
+{{--                            @endphp--}}
+{{--                            <div class="aiz-carousel overflow-hidden arrow-inactive-none arrow-dark arrow-x-0"--}}
+{{--                                data-items="1" data-arrows="true" data-dots="false" data-autoplay="true">--}}
+{{--                                @foreach ($banner_4_imags as $key => $value)--}}
+{{--                                    <div class="carousel-box overflow-hidden hov-scale-img">--}}
+{{--                                        <a href="{{ isset(json_decode($home_banner4_links, true)[$key]) ? json_decode($home_banner4_links, true)[$key] : '' }}"--}}
+{{--                                            class="d-block text-reset overflow-hidden" style="height: 650px;">--}}
+{{--                                            <img src="{{ static_asset('assets/img/placeholder-rect.jpg') }}"--}}
+{{--                                                data-src="{{ uploaded_asset($value) }}" alt="{{ env('APP_NAME') }} promo"--}}
+{{--                                                class="img-fit h-100 lazyload has-transition"--}}
+{{--                                                onerror="this.onerror=null;this.src='{{ static_asset('assets/img/placeholder-rect.jpg') }}';">--}}
+{{--                                        </a>--}}
+{{--                                    </div>--}}
+{{--                                @endforeach--}}
+{{--                            </div>--}}
+{{--                        </div>--}}
+{{--                    @endif--}}
 
-                    <!-- Top Sellers -->
+{{--                    <!-- Top Sellers -->--}}
 {{--                    <div class="col mb-2 mb-md-3 mt-2 mt-md-3">--}}
 {{--                        <div class="h-100" id="section_top_sellers">--}}
 {{--                            <div class="border px-3 py-2rem">--}}
@@ -409,11 +409,11 @@
 {{--                        </div>--}}
 {{--                    </div>--}}
 
-                </div>
-            </div>
-        </section>
-        @endif
-    @endif
+{{--                </div>--}}
+{{--            </div>--}}
+{{--        </section>--}}
+{{--        @endif--}}
+{{--    @endif--}}
 
     <!-- Top Brands, Banner section 5, Banner section 6 -->
     @if (get_setting('top_brands') != null)

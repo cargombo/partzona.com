@@ -29,7 +29,7 @@
                     @foreach ($brands as $brand)
                         <div class="col text-center border-right border-bottom hov-scale-img has-transition hov-shadow-out z-1">
                             <div class="d-block p-sm-3">
-                                <img style="object-fit: contain" src="{{ $brand->logo }}" class="lazyload h-md-100px mx-auto has-transition p-2 p-sm-4 mw-100"
+                                <img style="object-fit: contain" src="{{ uploaded_asset($brand->logo) }}" class="lazyload h-md-100px mx-auto has-transition p-2 p-sm-4 mw-100"
                                     alt="{{ $brand->getTranslation('name') }}">
                                 <p class="text-center text-dark fs-14 fw-700 mt-2">{{ $brand->getTranslation('name') }}</p>
                             </div>
