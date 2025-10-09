@@ -499,7 +499,6 @@ class HomeController extends Controller
     public function variant_price(Request $request)
     {
 
-
         $product = Product::with('stocks')->find($request->id);
         $str = '';
         $quantity = 0;
@@ -521,6 +520,7 @@ class HomeController extends Controller
                 }
             }
         }
+
         $product_stock = $product->stocks->where('variant', $str)->first();
 
         if(!$product_stock){

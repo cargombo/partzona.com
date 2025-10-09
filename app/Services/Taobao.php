@@ -47,13 +47,14 @@ class Taobao
 
         $response = curl_exec($curl);
         $err      = curl_error($curl);
-        dd($err);
+
 
         curl_close($curl);
 
         if ($err) {
             throw new \Exception('cURL Error: ' . $err);
         }
+//        dd(json_decode($response));
 
         return json_decode($response, true) ?: [];
     }
@@ -69,11 +70,7 @@ class Taobao
     {
         $app_key = 503494;
         $app_secret = '6irVZUUB5Va5BwdRPFrjbLenkWhbf5OF';
-
         $token = TaobaoAuthService::getValidToken();
-
-
-
         $timestamp = round(microtime(true) * 1000);
 
         $params = [
@@ -103,10 +100,8 @@ class Taobao
                 'Content-Type: application/json;charset=utf-8'
             ],
         ]);
-
         $response = curl_exec($curl);
         curl_close($curl);
-
         // JSON formatında qaytarır (assoc = true olarsa array qaytarır, false olarsa object)
         return json_decode($response, true);
     }
