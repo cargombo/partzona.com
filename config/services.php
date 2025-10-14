@@ -72,4 +72,9 @@ return [
         'industry_type' => env('PAYTM_INDUSTRY_TYPE'),
     ],
 
+    'united_logistics' => [
+        'base_url' => env('UNITED_LOGISTICS_BASE_URL'),
+        'api_key' => env('UNITED_LOGISTICS_API_KEY'),
+    ],
+
 ];

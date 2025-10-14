@@ -52,6 +52,13 @@ return [
             'days' => 7,
         ],
 
+        'unitedlogistics' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/unitedlogistics/unitedlogistics.log'),
+            'level' => 'error',
+            'days' => 30,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),
