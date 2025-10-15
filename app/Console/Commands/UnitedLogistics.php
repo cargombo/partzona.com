@@ -57,18 +57,26 @@ class UnitedLogistics extends Command
                 return;
             }
 
-            $response = Http::withHeaders([
-                'api_key' => $apiKey,
-                'Accept' => 'application/json',
-            ])->get($apiUrl . '/warehouses');
+            // Use cURL for the request
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $apiUrl . '/warehouses');
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'api_key: ' . $apiKey,
+                'Accept: application/json',
+            ]);
 
-            if ($response->successful()) {
-                $warehouses = $response->json();
+            $responseBody = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
 
+            $response = json_decode($responseBody, true);
+
+            if ($httpCode == 200 && isset($response['data'])) {
                 $this->info('Warehouses retrieved successfully:');
                 $this->table(
                     ['Pickup ID', 'Pickup Name'],
-                    collect($warehouses['data'] ?? [])->map(function ($warehouse) {
+                    collect($response['data'])->map(function ($warehouse) {
                         return [
                             $warehouse['pickup_id'] ?? 'N/A',
                             $warehouse['pickup_name'] ?? 'N/A',
@@ -76,11 +84,11 @@ class UnitedLogistics extends Command
                     })
                 );
 
-                $this->info('Total warehouses: ' . count($warehouses['data'] ?? []));
-                $this->info('Response code: ' . ($warehouses['code'] ?? 'N/A'));
+                $this->info('Total warehouses: ' . count($response['data']));
+                $this->info('Response code: ' . ($response['code'] ?? $httpCode));
             } else {
-                $this->error('Failed to fetch warehouses: ' . $response->status());
-                $this->error($response->body());
+                $this->error('Failed to fetch warehouses: HTTP ' . $httpCode);
+                $this->error($responseBody);
             }
         } catch (\Exception $e) {
             $this->error('Error: ' . $e->getMessage());
@@ -95,26 +103,34 @@ class UnitedLogistics extends Command
         $this->info('Fetching orders from United Logistics...');
 
         try {
-            $apiUrl = env('UNITED_LOGISTICS_API_URL', 'https://api.unitedlogistics.az');
-            $apiKey = env('UNITED_LOGISTICS_API_KEY');
+            $apiUrl = 'https://united.az/v1/3rd';
+            $apiKey = '32ec214d-561f-83f1-b283-a372b6e8bc23';
 
             if (!$apiKey) {
                 $this->error('UNITED_LOGISTICS_API_KEY not set in .env file');
                 return;
             }
 
-            $response = Http::withHeaders([
-                'api_key' => $apiKey,
-                'Accept' => 'application/json',
-            ])->get($apiUrl . '/orders');
+            // Use cURL for the request
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $apiUrl . '/orders');
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'api_key: ' . $apiKey,
+                'Accept: application/json',
+            ]);
 
-            if ($response->successful()) {
-                $orders = $response->json();
+            $responseBody = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
 
+            $response = json_decode($responseBody, true);
+
+            if ($httpCode == 200 && isset($response['data'])) {
                 $this->info('Orders retrieved successfully:');
                 $this->table(
                     ['Order ID', 'Status', 'Tracking', 'Created At'],
-                    collect($orders['data'] ?? [])->map(function ($order) {
+                    collect($response['data'])->map(function ($order) {
                         return [
                             $order['id'] ?? 'N/A',
                             $order['status'] ?? 'N/A',
@@ -124,11 +140,11 @@ class UnitedLogistics extends Command
                     })
                 );
 
-                $this->info('Total orders: ' . count($orders['data'] ?? []));
-                $this->info('Response code: ' . ($orders['code'] ?? 'N/A'));
+                $this->info('Total orders: ' . count($response['data']));
+                $this->info('Response code: ' . ($response['code'] ?? $httpCode));
             } else {
-                $this->error('Failed to fetch orders: ' . $response->status());
-                $this->error($response->body());
+                $this->error('Failed to fetch orders: HTTP ' . $httpCode);
+                $this->error($responseBody);
             }
         } catch (\Exception $e) {
             $this->error('Error: ' . $e->getMessage());
@@ -150,32 +166,40 @@ class UnitedLogistics extends Command
         $this->info("Fetching tracking information for: {$trackingNumber}");
 
         try {
-            $apiUrl = env('UNITED_LOGISTICS_API_URL', 'https://api.unitedlogistics.az');
-            $apiKey = env('UNITED_LOGISTICS_API_KEY');
+            $apiUrl = 'https://united.az/v1/3rd';
+            $apiKey = '32ec214d-561f-83f1-b283-a372b6e8bc23';
 
             if (!$apiKey) {
                 $this->error('UNITED_LOGISTICS_API_KEY not set in .env file');
                 return;
             }
 
-            $response = Http::withHeaders([
-                'api_key' => $apiKey,
-                'Accept' => 'application/json',
-            ])->get($apiUrl . "/tracking/{$trackingNumber}");
+            // Use cURL for the request
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $apiUrl . "/tracking/{$trackingNumber}");
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'api_key: ' . $apiKey,
+                'Accept: application/json',
+            ]);
 
-            if ($response->successful()) {
-                $tracking = $response->json();
+            $responseBody = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
 
+            $response = json_decode($responseBody, true);
+
+            if ($httpCode == 200 && $response) {
                 $this->info('Tracking information:');
-                $this->line('Status: ' . ($tracking['status'] ?? 'N/A'));
-                $this->line('Current Location: ' . ($tracking['current_location'] ?? 'N/A'));
-                $this->line('Estimated Delivery: ' . ($tracking['estimated_delivery'] ?? 'N/A'));
+                $this->line('Status: ' . ($response['status'] ?? 'N/A'));
+                $this->line('Current Location: ' . ($response['current_location'] ?? 'N/A'));
+                $this->line('Estimated Delivery: ' . ($response['estimated_delivery'] ?? 'N/A'));
 
-                if (isset($tracking['history']) && count($tracking['history']) > 0) {
+                if (isset($response['history']) && count($response['history']) > 0) {
                     $this->info("\nTracking History:");
                     $this->table(
                         ['Date', 'Location', 'Status', 'Description'],
-                        collect($tracking['history'])->map(function ($history) {
+                        collect($response['history'])->map(function ($history) {
                             return [
                                 $history['date'] ?? 'N/A',
                                 $history['location'] ?? 'N/A',
@@ -186,10 +210,10 @@ class UnitedLogistics extends Command
                     );
                 }
 
-                $this->info('Response code: ' . ($tracking['code'] ?? 'N/A'));
+                $this->info('Response code: ' . ($response['code'] ?? $httpCode));
             } else {
-                $this->error('Failed to fetch tracking information: ' . $response->status());
-                $this->error($response->body());
+                $this->error('Failed to fetch tracking information: HTTP ' . $httpCode);
+                $this->error($responseBody);
             }
         } catch (\Exception $e) {
             $this->error('Error: ' . $e->getMessage());
