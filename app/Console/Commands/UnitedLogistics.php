@@ -57,16 +57,15 @@ class UnitedLogistics extends Command
                 return;
             }
 
-            // Use cURL for the request - api_key in query string
+            // Use cURL for the request - api_key in both header AND query string
             $url = $apiUrl . '/warehouses?api_key=' . urlencode($apiKey);
-
-            $this->line("Debug - URL: {$url}");
 
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                'Accept: application/json',
+                'api_key: ' . $apiKey,
+                'Content-Type: application/json',
             ]);
 
             $responseBody = curl_exec($ch);
@@ -119,12 +118,13 @@ class UnitedLogistics extends Command
                 return;
             }
 
-            // Use cURL for the request - api_key in query string
+            // Use cURL for the request - api_key in header
             $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $apiUrl . '/orders?api_key=' . $apiKey);
+            curl_setopt($ch, CURLOPT_URL, $apiUrl . '/orders');
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                'Accept: application/json',
+                'api_key: ' . $apiKey,
+                'Content-Type: application/json',
             ]);
 
             $responseBody = curl_exec($ch);
@@ -181,12 +181,13 @@ class UnitedLogistics extends Command
                 return;
             }
 
-            // Use cURL for the request - api_key in query string
+            // Use cURL for the request - api_key in header
             $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $apiUrl . "/tracking/{$trackingNumber}?api_key=" . $apiKey);
+            curl_setopt($ch, CURLOPT_URL, $apiUrl . "/parcel-states/{$trackingNumber}");
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                'Accept: application/json',
+                'api_key: ' . $apiKey,
+                'Content-Type: application/json',
             ]);
 
             $responseBody = curl_exec($ch);
