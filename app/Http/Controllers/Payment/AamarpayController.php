@@ -2,18 +2,18 @@
 
 namespace App\Http\Controllers\Payment;
 
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\Models\CustomerPackage;
-use App\Models\SellerPackage;
-use App\Models\CombinedOrder;
 use App\Http\Controllers\CustomerPackageController;
 use App\Http\Controllers\SellerPackageController;
 use App\Http\Controllers\WalletController;
-use App\Http\Controllers\CheckoutController;
+use App\Models\CombinedOrder;
+use App\Models\CustomerPackage;
 use App\Models\Order;
-use Session;
+use App\Models\SellerPackage;
 use Auth;
+use Illuminate\Http\Request;
+use Session;
 
 class AamarpayController extends Controller
 {
@@ -114,7 +114,7 @@ class AamarpayController extends Controller
             $base_url = 'https://secure.aamarpay.com/';
         }
 
-?>
+        ?>
         <html xmlns="http://www.w3.org/1999/xhtml">
 
         <head>
@@ -127,12 +127,12 @@ class AamarpayController extends Controller
 
         <body onLoad="closethisasap();">
 
-            <form name="redirectpost" method="post" action="<?php echo $base_url . $url; ?>"></form>
+        <form name="redirectpost" method="post" action="<?php echo $base_url . $url; ?>"></form>
 
         </body>
 
         </html>
-<?php
+        <?php
         exit;
     }
 

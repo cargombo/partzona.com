@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V2;
 
 use App\Http\Controllers\Api\TazbeebexController;
+use App\Http\Controllers\United\UnitedLogisticsController;
 use App\Http\Middleware\EnsureSystemKey;
 use Illuminate\Support\Facades\Route;
 Route::group(['prefix' => 'v2'], function () {
@@ -461,4 +462,11 @@ Route::prefix('tz')->group(function () {
 
 Route::any('/taobao/callback', function () {
     return response()->json(['messages'=> 'Succesfuly'],200);
+});
+
+Route::prefix('united-logistics')->group(function () {
+    Route::post('/parcel', [UnitedLogisticsController::class, 'createParcel']);
+    Route::get('/warehouses', [UnitedLogisticsController::class, 'getWarehouses']);
+    Route::post('/inbound-scan', [UnitedLogisticsController::class, 'inboundScan']);
+    Route::get('/parcel-states/{barcode}', [UnitedLogisticsController::class, 'getParcelStates']);
 });
