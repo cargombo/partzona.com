@@ -57,18 +57,26 @@ class UnitedLogistics extends Command
                 return;
             }
 
-            // Use cURL for the request
+            // Use cURL for the request - api_key in query string
+            $url = $apiUrl . '/warehouses?api_key=' . urlencode($apiKey);
+
+            $this->line("Debug - URL: {$url}");
+
             $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $apiUrl . '/warehouses');
+            curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                'api_key: ' . $apiKey,
                 'Accept: application/json',
             ]);
 
             $responseBody = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
             curl_close($ch);
+
+            if ($curlError) {
+                $this->error("cURL Error: {$curlError}");
+            }
 
             $response = json_decode($responseBody, true);
 
@@ -111,12 +119,11 @@ class UnitedLogistics extends Command
                 return;
             }
 
-            // Use cURL for the request
+            // Use cURL for the request - api_key in query string
             $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $apiUrl . '/orders');
+            curl_setopt($ch, CURLOPT_URL, $apiUrl . '/orders?api_key=' . $apiKey);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                'api_key: ' . $apiKey,
                 'Accept: application/json',
             ]);
 
@@ -174,12 +181,11 @@ class UnitedLogistics extends Command
                 return;
             }
 
-            // Use cURL for the request
+            // Use cURL for the request - api_key in query string
             $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $apiUrl . "/tracking/{$trackingNumber}");
+            curl_setopt($ch, CURLOPT_URL, $apiUrl . "/tracking/{$trackingNumber}?api_key=" . $apiKey);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                'api_key: ' . $apiKey,
                 'Accept: application/json',
             ]);
 
