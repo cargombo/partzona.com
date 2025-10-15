@@ -252,7 +252,7 @@ class ScrapeInsertionService
                     foreach ($sku['properties'] as $prop) {
 
                         $propName  = $prop['prop_name'] ?? null;
-                        $valueName = $prop['value_name'] ?? null;
+                        $valueName = $attributeValueNames[$prop['value_id']] ?? $prop['value_name'];
                         $variant   = $variant ? $variant . "-" . trim($valueName) : trim($valueName);
 //                            $propName = self::translateText($propName, 'zh', 'az');
 //                            $valueName = self::translateText($valueName, 'zh', 'az');

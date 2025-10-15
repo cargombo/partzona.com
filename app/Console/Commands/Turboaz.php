@@ -2,6 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Models\AutoModel;
+use App\Models\AutoModelGroup;
 use App\Models\Brand;
 use App\Models\Upload;
 use App\Services\TurboazScrap;
@@ -25,13 +27,29 @@ class Turboaz extends Command
                     $uploadId = $this->uploadLogo($brand['logo'], $brand['name']);
                 }
 
-                Brand::create([
-                    'name' => $brand['name'],
-                    'logo' => $uploadId,
-                    'slug' => \Str::slug($brand['name']),
-                    'meta_title' => $brand['name'],
-                    'top' => $brand['is_popular']
-                ]);
+                $brand             = new Brand();
+                $brand->id         = $brand['id'];
+                $brand->name       = $brand['name'];
+                $brand->logo       = $uploadId;
+                $brand->slug       = \Str::slug($brand['name']);
+                $brand->meta_title = $brand['name'];
+                $brand->top        = $brand['is_popular'];
+                $brand->save();
+
+                $autoModelGroup = new AutoModelGroup();
+                $autoModelGroup->id = $brand['group']['id'];
+                $autoModelGroup->name = $brand['group']['name'];
+                $autoModelGroup->save();
+
+                foreach ($brand['models'] as $model) {
+                    $autoModel  = new AutoModel();
+                    $autoModel->id       = $model['id'];
+                    $autoModel->group_id = $autoModelGroup->id;
+                    $autoModel->name = $model['name'];
+                    $autoModel->save();
+                }
+
+
 
                 $this->info("{$brand['name']} added to DB");
             }
