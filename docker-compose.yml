@@ -14,6 +14,8 @@ services:
     volumes:
       - ./:/var/www
       - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    extra_hosts:
+      - "united.az:94.20.153.134"
     networks:
       - partzona
 
