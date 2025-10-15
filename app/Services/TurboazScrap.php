@@ -44,17 +44,15 @@ class TurboazScrap
 
         $popularIds = array_column($data['popular_makes'], 'id');
 
-
         $brands = [];
         foreach ($data['makes'] as $make) {
-            $datas    = self::getModels($make['id']);
+            $groups = self::getModels($make['id']); // Returns array of groups
 
             $brands[] = [
                 'id'         => $make['id'],
                 'name'       => $make['name'],
-                'group'      => $datas['group'] ?? [],
                 'logo'       => $make['logo_url'],
-                'models'     => $datas['models'] ?? [],
+                'groups'     => $groups, // Array of groups, each with 'group' and 'models'
                 'is_popular' => in_array($make['id'], $popularIds) ? true : false,
             ];
 
@@ -94,6 +92,6 @@ class TurboazScrap
         }
 
         $data = json_decode($response, true);
-        return $data[0];
+        return $data ?? [['group' => ['id' => null, 'name' => null], 'models' => []]];
     }
 }

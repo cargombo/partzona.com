@@ -194,9 +194,22 @@
                                                 </a>
                                             </li>
                                         @endcan
+                                        {{-- Auto Models --}}
+                                        <li class="aiz-side-nav-item">
+                                            <a href="{{ route('admin.auto-models.index') }}" class="aiz-side-nav-link {{ areActiveRoutes(['admin.auto-models.index', 'admin.auto-models.create', 'admin.auto-models.edit'])}}">
+                                                <span class="aiz-side-nav-text">{{translate('Modeller')}}</span>
+                                            </a>
+                                        </li>
                                     </ul>
                                 </li>
                             @endcan
+
+                            {{-- Auto Parts --}}
+                            <li class="aiz-side-nav-item">
+                                <a href="{{ route('admin.auto-parts.index') }}" class="aiz-side-nav-link {{ areActiveRoutes(['admin.auto-parts.index', 'admin.auto-parts.create', 'admin.auto-parts.edit'])}}">
+                                    <span class="aiz-side-nav-text">{{translate('Ehtiyat hissələri')}}</span>
+                                </a>
+                            </li>
 
                             @can('view_product_attributes')
                                 <li class="aiz-side-nav-item">

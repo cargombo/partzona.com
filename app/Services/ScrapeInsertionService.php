@@ -127,6 +127,12 @@ class ScrapeInsertionService
             return $products;
         }
         catch (\Exception $e) {
+            \Log::error('Search and insert error: ' . $e->getMessage(), [
+                'keyword' => $keyword,
+                'category_id' => $category_id,
+                'line' => $e->getLine(),
+                'file' => $e->getFile()
+            ]);
             return [];
         }
     }
@@ -365,7 +371,14 @@ class ScrapeInsertionService
 
         }
         catch (\Exception $e) {
-            dd($e->getMessage(), $e->getLine());
+            \Log::error('Product insertion error: ' . $e->getMessage(), [
+                'line' => $e->getLine(),
+                'file' => $e->getFile()
+            ]);
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
         }
     }
 

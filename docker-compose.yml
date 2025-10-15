@@ -45,7 +45,7 @@ services:
       SERVICE_NAME: mysql
     volumes:
       - dbdata:/var/lib/mysql
-      # - ./partzone_db_backup.sql:/docker-entrypoint-initdb.d/partzone_db_backup.sql
+      - ./partzone_db_backup.sql:/docker-entrypoint-initdb.d/partzone_db_backup.sql
     ports:
       - "3306:3306"
     networks:

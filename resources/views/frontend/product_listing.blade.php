@@ -434,6 +434,22 @@
             url.searchParams.set('page', currentPage);
             window.location.href = url.toString();
         }
+
+        // Fill header search inputs with URL parameters
+        $(document).ready(function() {
+            @if(isset($searchBrand) && $searchBrand)
+                $('#header_brand_search').val('{{ $searchBrand }}');
+                $('#header_model_search').prop('disabled', false);
+            @endif
+
+            @if(isset($searchModel) && $searchModel)
+                $('#header_model_search').val('{{ $searchModel }}');
+            @endif
+
+            @if(isset($searchPart) && $searchPart)
+                $('#header_part_search').val('{{ $searchPart }}');
+            @endif
+        });
     </script>
 
 

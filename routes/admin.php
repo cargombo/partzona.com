@@ -54,6 +54,8 @@ use App\Http\Controllers\TaxController;
 use App\Http\Controllers\UpdateController;
 use App\Http\Controllers\WebsiteController;
 use App\Http\Controllers\ZoneController;
+use App\Http\Controllers\AutoModelController;
+use App\Http\Controllers\AutoPartController;
 
 /*
   |--------------------------------------------------------------------------
@@ -100,6 +102,14 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'admin', 'prevent-ba
         Route::get('/brand-bulk-upload', 'index')->name('brand_bulk_upload.index');
         Route::post('/brand-bulk-upload/store', 'bulk_upload')->name('brand_bulk_upload');
     });
+
+    // Auto Models
+    Route::resource('auto-models', AutoModelController::class, ['as' => 'admin']);
+    Route::get('/auto-models/{id}/destroy', [AutoModelController::class, 'destroy'])->name('admin.auto-models.destroy');
+
+    // Auto Parts
+    Route::resource('auto-parts', AutoPartController::class, ['as' => 'admin']);
+    Route::get('/auto-parts/{id}/destroy', [AutoPartController::class, 'destroy'])->name('admin.auto-parts.destroy');
 
     Route::controller(AdminController::class)->group(function () {
         Route::post('/dashboard/top-category-products-section', 'top_category_products_section')->name('dashboard.top_category_products_section');

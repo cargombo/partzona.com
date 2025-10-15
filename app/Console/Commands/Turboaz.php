@@ -20,38 +20,64 @@ class Turboaz extends Command
     public function handle()
     {
         try {
+            $this->info("Start");
             $brands = TurboazScrap::getBrands();
-            foreach ($brands as $brand) {
+            $this->info("Total brands fetched: " . count($brands));
+
+            foreach ($brands as $brandData) {
                 $uploadId = null;
-                if (!empty($brand['logo'])) {
-                    $uploadId = $this->uploadLogo($brand['logo'], $brand['name']);
+                if (!empty($brandData['logo'])) {
+                    $uploadId = $this->uploadLogo($brandData['logo'], $brandData['name']);
                 }
 
                 $brand             = new Brand();
-                $brand->id         = $brand['id'];
-                $brand->name       = $brand['name'];
+                $brand->id         = $brandData['id'];
+                $brand->name       = $brandData['name'];
                 $brand->logo       = $uploadId;
-                $brand->slug       = \Str::slug($brand['name']);
-                $brand->meta_title = $brand['name'];
-                $brand->top        = $brand['is_popular'];
+                $brand->slug       = \Str::slug($brandData['name']);
+                $brand->meta_title = $brandData['name'];
+                $brand->top        = $brandData['is_popular'] ? 1 : 0;
                 $brand->save();
 
-                $autoModelGroup = new AutoModelGroup();
-                $autoModelGroup->id = $brand['group']['id'];
-                $autoModelGroup->name = $brand['group']['name'];
-                $autoModelGroup->save();
+                // Process all groups for this brand
+                if (!empty($brandData['groups'])) {
+                    foreach ($brandData['groups'] as $groupData) {
+                        $groupId = null;
 
-                foreach ($brand['models'] as $model) {
-                    $autoModel  = new AutoModel();
-                    $autoModel->id       = $model['id'];
-                    $autoModel->group_id = $autoModelGroup->id;
-                    $autoModel->name = $model['name'];
-                    $autoModel->save();
+                        // Create group if it exists
+                        if (!empty($groupData['group']['id']) && !empty($groupData['group']['name'])) {
+                            try {
+                                $autoModelGroup = new AutoModelGroup();
+                                $autoModelGroup->id = $groupData['group']['id'];
+                                $autoModelGroup->name = $groupData['group']['name'];
+                                $autoModelGroup->save();
+                                $groupId = $autoModelGroup->id;
+                            } catch (\Exception $e) {
+                                // Skip duplicate group IDs
+                                $groupId = $groupData['group']['id'];
+                            }
+                        }
+
+                        // Save models for this group
+                        if (!empty($groupData['models'])) {
+                            foreach ($groupData['models'] as $model) {
+                                try {
+                                    $autoModel  = new AutoModel();
+                                    $autoModel->id       = $model['id'];
+                                    $autoModel->brand_id = $brandData['id'];
+                                    $autoModel->group_id = $groupId;
+                                    $autoModel->name = $model['name'];
+                                    $autoModel->save();
+                                } catch (\Exception $e) {
+                                    // Skip duplicate model IDs
+                                    $this->warn("Skipping duplicate model: {$model['name']} (ID: {$model['id']})");
+                                }
+                            }
+                        }
+                    }
                 }
 
-
-
-                $this->info("{$brand['name']} added to DB");
+                $this->info("{$brandData['name']} added to DB");
             }
         } catch (\Exception $e) {
             $this->error("Error occurred: {$e->getMessage()}");

@@ -102,39 +102,46 @@ class TaobaoAuthService
 
     public static function getValidToken()
     {
-        $token = TaobaoToken::getActiveToken();
-        if (!$token) {
-            $token = self::createAndSaveAccessToken();
+        try {
+            $token = TaobaoToken::getActiveToken();
+            if (!$token) {
+                $token = self::createAndSaveAccessToken();
+            }
+
+            if ($token->isAccessTokenValid() && !$token->needsRefresh()) {
+                return $token->access_token;
+            }
+
+            if ($token->isRefreshTokenValid()) {
+
+                $refreshedData = self::refreshAccessToken($token->refresh_token);
+                $token->update(['is_active' => false]);
+
+                $newToken = TaobaoToken::create([
+                    'access_token' => $refreshedData['access_token'],
+                    'refresh_token' => $refreshedData['refresh_token'] ?? $token->refresh_token,
+                    'user_id' => $token->user_id,
+                    'seller_id' => $token->seller_id,
+                    'account' => $token->account,
+                    'account_platform' => $token->account_platform,
+                    'short_code' => $refreshedData['short_code'] ?? null,
+                    'expires_in' => $refreshedData['expires_in'],
+                    'refresh_expires_in' => $refreshedData['refresh_expires_in'] ?? $token->refresh_expires_in,
+                    'access_token_expires_at' => Carbon::now()->addSeconds($refreshedData['expires_in']),
+                    'refresh_token_expires_at' => $token->refresh_token_expires_at,
+                    'request_id' => $refreshedData['request_id'] ?? null,
+                    'trace_id' => $refreshedData['_trace_id_'] ?? null,
+                    'is_active' => true
+                ]);
+
+                return $newToken->access_token;
+            }
+        } catch (\Exception $e) {
+            \Log::warning('Taobao auth error: ' . $e->getMessage());
+            return null;
         }
 
-        if ($token->isAccessTokenValid() && !$token->needsRefresh()) {
-            return $token->access_token;
-        }
-
-        if ($token->isRefreshTokenValid()) {
-
-            $refreshedData = self::refreshAccessToken($token->refresh_token);
-            $token->update(['is_active' => false]);
-
-            $newToken = TaobaoToken::create([
-                'access_token' => $refreshedData['access_token'],
-                'refresh_token' => $refreshedData['refresh_token'] ?? $token->refresh_token,
-                'user_id' => $token->user_id,
-                'seller_id' => $token->seller_id,
-                'account' => $token->account,
-                'account_platform' => $token->account_platform,
-                'short_code' => $refreshedData['short_code'] ?? null,
-                'expires_in' => $refreshedData['expires_in'],
-                'refresh_expires_in' => $refreshedData['refresh_expires_in'] ?? $token->refresh_expires_in,
-                'access_token_expires_at' => Carbon::now()->addSeconds($refreshedData['expires_in']),
-                'refresh_token_expires_at' => $token->refresh_token_expires_at,
-                'request_id' => $refreshedData['request_id'] ?? null,
-                'trace_id' => $refreshedData['_trace_id_'] ?? null,
-                'is_active' => true
-            ]);
-
-            return $newToken;
-        }
+        return null;
     }
 
     /**

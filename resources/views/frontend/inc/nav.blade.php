@@ -166,24 +166,69 @@
                                             class="la la-2x la-long-arrow-left"></i></button>
                                 </div>
 {{--                                id="search"--}}
-                                <div class="search-input-box">
-                                    <input type="text"
-                                           class="border border-soft-light form-control fs-14 hov-animate-outline"
-                                           name="keyword"
-                                           @isset($query)
-                                               value="{{ $query }}"
-                                           @endisset
-                                           placeholder="{{ translate('Marka və hissə adı yazın...') }}" autocomplete="off">
+                                <!-- Three-part Auto Parts Search -->
+                                <div class="header-auto-search-wrapper">
+                                    <!-- Brand Autocomplete -->
+                                    <div class="header-search-field">
+                                        <div class="search-field-icon">
+                                            <i class="las la-trademark"></i>
+                                        </div>
+                                        <div class="position-relative flex-grow-1">
+                                            <input type="text"
+                                                   class="header-search-input"
+                                                   id="header_brand_search"
+                                                   placeholder="{{ translate('Marka') }}"
+                                                   autocomplete="off">
+                                            <input type="hidden" id="header_brand_id">
+                                            <div id="header_brand_suggestions" class="header-suggestions-dropdown"></div>
+                                        </div>
+                                    </div>
 
-                                    <svg id="Group_723" data-name="Group 723" xmlns="http://www.w3.org/2000/svg"
-                                         width="20.001" height="20" viewBox="0 0 20.001 20">
-                                        <path id="Path_3090" data-name="Path 3090"
-                                              d="M9.847,17.839a7.993,7.993,0,1,1,7.993-7.993A8,8,0,0,1,9.847,17.839Zm0-14.387a6.394,6.394,0,1,0,6.394,6.394A6.4,6.4,0,0,0,9.847,3.453Z"
-                                              transform="translate(-1.854 -1.854)" fill="#b5b5bf"/>
-                                        <path id="Path_3091" data-name="Path 3091"
-                                              d="M24.4,25.2a.8.8,0,0,1-.565-.234l-6.15-6.15a.8.8,0,0,1,1.13-1.13l6.15,6.15A.8.8,0,0,1,24.4,25.2Z"
-                                              transform="translate(-5.2 -5.2)" fill="#b5b5bf"/>
-                                    </svg>
+                                    <div class="search-divider"></div>
+
+                                    <!-- Model Dropdown with Search -->
+                                    <div class="header-search-field">
+                                        <div class="search-field-icon">
+                                            <i class="las la-car-side"></i>
+                                        </div>
+                                        <div class="position-relative flex-grow-1">
+                                            <input type="text"
+                                                   class="header-search-input"
+                                                   id="header_model_search"
+                                                   placeholder="{{ translate('Model') }}"
+                                                   autocomplete="off"
+                                                   disabled>
+                                            <input type="hidden" id="header_model_id">
+                                            <div id="header_model_suggestions" class="header-suggestions-dropdown"></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="search-divider"></div>
+
+                                    <!-- Auto Part Keyword Search -->
+                                    <div class="header-search-field">
+                                        <div class="search-field-icon">
+                                            <i class="las la-cog"></i>
+                                        </div>
+                                        <div class="position-relative flex-grow-1">
+                                            <input type="text"
+                                                   class="header-search-input"
+                                                   id="header_part_search"
+                                                   placeholder="{{ translate('Ehtiyat hissəsi') }}"
+                                                   autocomplete="off">
+                                            <div id="header_part_suggestions" class="header-suggestions-dropdown"></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Search Button -->
+                                    <button type="button" id="header_search_btn" class="header-search-btn">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 20.001 20">
+                                            <path d="M9.847,17.839a7.993,7.993,0,1,1,7.993-7.993A8,8,0,0,1,9.847,17.839Zm0-14.387a6.394,6.394,0,1,0,6.394,6.394A6.4,6.4,0,0,0,9.847,3.453Z"
+                                                  transform="translate(-1.854 -1.854)" fill="currentColor"/>
+                                            <path d="M24.4,25.2a.8.8,0,0,1-.565-.234l-6.15-6.15a.8.8,0,0,1,1.13-1.13l6.15,6.15A.8.8,0,0,1,24.4,25.2Z"
+                                                  transform="translate(-5.2 -5.2)" fill="currentColor"/>
+                                        </svg>
+                                    </button>
                                 </div>
                             </div>
                         </form>
@@ -781,24 +826,201 @@
     </div>
 </div>
 
-@section('script')
-    <script type="text/javascript">
-        function show_order_details(order_id) {
-            $('#order-details-modal-body').html(null);
+<style>
+/* Header Auto Search Wrapper */
+.header-auto-search-wrapper {
+    display: flex;
+    align-items: center;
+    background: white;
+    border: 2px solid #ff5252;
+    border-radius: 50px;
+    padding: 4px;
+    width: 100%;
+    box-shadow: 0 3px 12px rgba(255, 82, 82, 0.15);
+    transition: all 0.3s ease;
+}
 
-            if (!$('#modal-size').hasClass('modal-lg')) {
-                $('#modal-size').addClass('modal-lg');
-            }
+.header-auto-search-wrapper:focus-within {
+    box-shadow: 0 5px 20px rgba(255, 82, 82, 0.25);
+    border-color: #ff1744;
+}
 
-            $.post('{{ route('orders.details') }}', {
-                _token: AIZ.data.csrf,
-                order_id: order_id
-            }, function (data) {
-                $('#order-details-modal-body').html(data);
-                $('#order_details').modal();
-                $('.c-preloader').hide();
-                AIZ.plugins.bootstrapSelect('refresh');
-            });
-        }
-    </script>
-@endsection
+/* Search Field */
+.header-search-field {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    padding: 0 12px;
+    gap: 10px;
+}
+
+.search-field-icon {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, #ff5252 0%, #ff1744 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(255, 82, 82, 0.3);
+}
+
+.header-search-field:hover .search-field-icon {
+    transform: scale(1.1);
+    box-shadow: 0 3px 12px rgba(255, 82, 82, 0.4);
+}
+
+.search-field-icon i {
+    font-size: 16px;
+    color: white;
+}
+
+.header-search-input {
+    border: 1px solid #ffcdd2;
+    background: #fff8f8;
+    outline: none;
+    width: 100%;
+    font-size: 14px;
+    color: #333;
+    font-weight: 500;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.header-search-input:focus {
+    border-color: #ff5252;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(255, 82, 82, 0.1);
+}
+
+.header-search-input::placeholder {
+    color: #999;
+    font-weight: 400;
+}
+
+.header-search-input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: #f5f5f5;
+}
+
+/* Search Divider */
+.search-divider {
+    width: 2px;
+    height: 32px;
+    background: linear-gradient(180deg, transparent 0%, #ff5252 50%, transparent 100%);
+    flex-shrink: 0;
+    opacity: 0.3;
+}
+
+/* Search Button */
+.header-search-btn {
+    flex-shrink: 0;
+    background: linear-gradient(135deg, #ff5252 0%, #ff1744 100%);
+    border: none;
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: white;
+    box-shadow: 0 4px 12px rgba(255, 82, 82, 0.4);
+}
+
+.header-search-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(255, 82, 82, 0.5);
+    background: linear-gradient(135deg, #ff1744 0%, #d50000 100%);
+}
+
+.header-search-btn:active {
+    transform: scale(0.98);
+}
+
+/* Suggestions Dropdown */
+.header-suggestions-dropdown {
+    position: absolute;
+    background: white;
+    border-radius: 12px;
+    max-height: 320px;
+    overflow-y: auto;
+    z-index: 10000;
+    width: 100%;
+    top: calc(100% + 8px);
+    left: 0;
+    display: none;
+    box-shadow: 0 10px 40px rgba(255, 82, 82, 0.15);
+    border: 2px solid #ffcdd2;
+}
+
+.header-suggestion-item {
+    padding: 12px 16px;
+    cursor: pointer;
+    border-bottom: 1px solid #ffebee;
+    transition: all 0.2s ease;
+    display: block;
+}
+
+.header-suggestion-item:hover {
+    background: linear-gradient(90deg, #fff5f5 0%, #fff 100%);
+    padding-left: 20px;
+    border-left: 3px solid #ff5252;
+}
+
+.header-suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.header-suggestion-item strong {
+    display: block;
+    color: #333;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.header-suggestion-item .text-muted {
+    display: block;
+    color: #666;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .header-auto-search-wrapper {
+        border-radius: 12px;
+        padding: 3px;
+        border-width: 2px;
+    }
+
+    .search-field-icon {
+        width: 28px;
+        height: 28px;
+    }
+
+    .search-field-icon i {
+        font-size: 14px;
+    }
+
+    .header-search-btn {
+        width: 38px;
+        height: 38px;
+    }
+
+    .header-search-input {
+        font-size: 13px;
+        padding: 6px 10px;
+    }
+
+    .search-divider {
+        height: 28px;
+    }
+}
+</style>
+

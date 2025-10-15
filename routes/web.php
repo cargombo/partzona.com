@@ -163,6 +163,12 @@ Route::controller(HomeController::class)->group(function () {
     Route::get('/privacy-policy', 'privacypolicy')->name('privacypolicy');
 
     Route::get('/track-your-order', 'trackOrder')->name('orders.track');
+
+    // Auto Parts Search API Endpoints
+    Route::get('/api/search-brands', 'searchBrands')->name('api.search.brands');
+    Route::get('/api/models-by-brand', 'getModelsByBrand')->name('api.models.by_brand');
+    Route::get('/api/search-parts', 'searchAutoParts')->name('api.search.parts');
+    Route::post('/auto-parts-search', 'autoPartsSearch')->name('auto_parts.search');
 });
 
 // Language Switch

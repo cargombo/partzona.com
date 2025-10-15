@@ -21,7 +21,19 @@ class SearchController extends Controller
 {
     public function index(Request $request, $category_id = null, $brand_id = null,$product_ids = [])
     {
-        $query = $request->keyword;
+        // Check for separate auto parts search parameters
+        $searchBrand = $request->get('brand');
+        $searchModel = $request->get('model');
+        $searchPart = $request->get('part');
+
+        // Build query from individual parameters if they exist
+        if ($searchBrand || $searchModel || $searchPart) {
+            $queryParts = array_filter([$searchBrand, $searchModel, $searchPart]);
+            $query = implode(' ', $queryParts);
+        } else {
+            $query = $request->keyword;
+        }
+
         $sort_by = $request->sort_by;
         $min_price = intval($request->min_price);
         $max_price = intval($request->max_price);
@@ -47,7 +59,15 @@ class SearchController extends Controller
             $category->save();
         }
         $products = ScrapeInsertionService::searchAndInsertProducts($category->name,$category->id,$page);
-        return view('frontend.product_listing', compact('products', 'query', 'category', 'categories', 'category_id', 'brand_id', 'sort_by', 'seller_id', 'min_price', 'max_price', 'attributes', 'selected_attribute_values', 'colors', 'selected_color'));
+
+        // Convert to collection and create paginator if products exist
+        if (!empty($products)) {
+            $products = collect($products);
+        } else {
+            $products = collect([]);
+        }
+
+        return view('frontend.product_listing', compact('products', 'query', 'category', 'categories', 'category_id', 'brand_id', 'sort_by', 'seller_id', 'min_price', 'max_price', 'attributes', 'selected_attribute_values', 'colors', 'selected_color', 'searchBrand', 'searchModel', 'searchPart'));
 
 
 }
