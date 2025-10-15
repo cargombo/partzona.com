@@ -50,35 +50,34 @@ class UnitedLogistics extends Command
         try {
             // United Logistics API endpoint
             $apiUrl = env('UNITED_LOGISTICS_API_URL', 'https://api.unitedlogistics.az');
-            $apiToken = env('UNITED_LOGISTICS_API_TOKEN');
+            $apiKey = env('UNITED_LOGISTICS_API_KEY');
 
-            if (!$apiToken) {
-                $this->error('UNITED_LOGISTICS_API_TOKEN not set in .env file');
+            if (!$apiKey) {
+                $this->error('UNITED_LOGISTICS_API_KEY not set in .env file');
                 return;
             }
 
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $apiToken,
+                'api_key' => $apiKey,
                 'Accept' => 'application/json',
-            ])->get($apiUrl . '/api/warehouses');
+            ])->get($apiUrl . '/warehouses');
 
             if ($response->successful()) {
                 $warehouses = $response->json();
 
                 $this->info('Warehouses retrieved successfully:');
                 $this->table(
-                    ['ID', 'Name', 'Country', 'Address'],
+                    ['Pickup ID', 'Pickup Name'],
                     collect($warehouses['data'] ?? [])->map(function ($warehouse) {
                         return [
-                            $warehouse['id'] ?? 'N/A',
-                            $warehouse['name'] ?? 'N/A',
-                            $warehouse['country'] ?? 'N/A',
-                            $warehouse['address'] ?? 'N/A',
+                            $warehouse['pickup_id'] ?? 'N/A',
+                            $warehouse['pickup_name'] ?? 'N/A',
                         ];
                     })
                 );
 
                 $this->info('Total warehouses: ' . count($warehouses['data'] ?? []));
+                $this->info('Response code: ' . ($warehouses['code'] ?? 'N/A'));
             } else {
                 $this->error('Failed to fetch warehouses: ' . $response->status());
                 $this->error($response->body());
@@ -97,17 +96,17 @@ class UnitedLogistics extends Command
 
         try {
             $apiUrl = env('UNITED_LOGISTICS_API_URL', 'https://api.unitedlogistics.az');
-            $apiToken = env('UNITED_LOGISTICS_API_TOKEN');
+            $apiKey = env('UNITED_LOGISTICS_API_KEY');
 
-            if (!$apiToken) {
-                $this->error('UNITED_LOGISTICS_API_TOKEN not set in .env file');
+            if (!$apiKey) {
+                $this->error('UNITED_LOGISTICS_API_KEY not set in .env file');
                 return;
             }
 
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $apiToken,
+                'api_key' => $apiKey,
                 'Accept' => 'application/json',
-            ])->get($apiUrl . '/api/orders');
+            ])->get($apiUrl . '/orders');
 
             if ($response->successful()) {
                 $orders = $response->json();
@@ -126,6 +125,7 @@ class UnitedLogistics extends Command
                 );
 
                 $this->info('Total orders: ' . count($orders['data'] ?? []));
+                $this->info('Response code: ' . ($orders['code'] ?? 'N/A'));
             } else {
                 $this->error('Failed to fetch orders: ' . $response->status());
                 $this->error($response->body());
@@ -151,17 +151,17 @@ class UnitedLogistics extends Command
 
         try {
             $apiUrl = env('UNITED_LOGISTICS_API_URL', 'https://api.unitedlogistics.az');
-            $apiToken = env('UNITED_LOGISTICS_API_TOKEN');
+            $apiKey = env('UNITED_LOGISTICS_API_KEY');
 
-            if (!$apiToken) {
-                $this->error('UNITED_LOGISTICS_API_TOKEN not set in .env file');
+            if (!$apiKey) {
+                $this->error('UNITED_LOGISTICS_API_KEY not set in .env file');
                 return;
             }
 
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $apiToken,
+                'api_key' => $apiKey,
                 'Accept' => 'application/json',
-            ])->get($apiUrl . "/api/tracking/{$trackingNumber}");
+            ])->get($apiUrl . "/tracking/{$trackingNumber}");
 
             if ($response->successful()) {
                 $tracking = $response->json();
@@ -185,6 +185,8 @@ class UnitedLogistics extends Command
                         })
                     );
                 }
+
+                $this->info('Response code: ' . ($tracking['code'] ?? 'N/A'));
             } else {
                 $this->error('Failed to fetch tracking information: ' . $response->status());
                 $this->error($response->body());
