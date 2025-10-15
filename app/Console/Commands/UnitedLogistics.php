@@ -49,8 +49,8 @@ class UnitedLogistics extends Command
 
         try {
             // United Logistics API endpoint
-            $apiUrl = env('UNITED_LOGISTICS_API_URL', 'https://api.unitedlogistics.az');
-            $apiKey = env('UNITED_LOGISTICS_API_KEY');
+            $apiUrl = 'https://united.az/v1/3rd';
+            $apiKey = '32ec214d-561f-83f1-b283-a372b6e8bc23';
 
             if (!$apiKey) {
                 $this->error('UNITED_LOGISTICS_API_KEY not set in .env file');
