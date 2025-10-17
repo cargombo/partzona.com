@@ -1,14 +1,29 @@
+/**
+ * Auto Parts Search System
+ * Version: 2.3.0
+ * Last Updated: 2025-10-16
+ *
+ * Features:
+ * - Brand autocomplete with ID tracking
+ * - Model selection based on brand
+ * - Auto part autocomplete with ID tracking
+ * - Dual data submission (names + IDs)
+ * - Header search functionality
+ * - Form validation
+ * - Debug logging for troubleshooting
+ */
+
 // Header Search Functionality
 $(document).ready(function () {
-    console.log('Header search script loaded');
+    console.log('Header search script loaded - v2.3.0');
     let brandSearchTimeout;
     let partSearchTimeout;
 
-    // Brand Autocomplete
+    // Brand Autocomplete for Header Search
     $('#header_brand_search').on('input', function () {
         clearTimeout(brandSearchTimeout);
         const query = $(this).val();
-        console.log('Brand search query:', query);
+        console.log('Header brand search query:', query);
 
         if (query.length < 2) {
             $('#header_brand_suggestions').hide().empty();
@@ -123,6 +138,17 @@ $(document).ready(function () {
         $('#header_model_suggestions').hide();
     });
 
+    // Also update model ID when user clicks away from suggestions but has typed a matching model
+    $('#header_model_search').on('blur', function() {
+        const typedText = $(this).val().trim().toLowerCase();
+        if (typedText && allModels.length > 0) {
+            const exactMatch = allModels.find(model => model.name.toLowerCase() === typedText);
+            if (exactMatch) {
+                $('#header_model_id').val(exactMatch.id);
+            }
+        }
+    });
+
     // Auto Part Keyword Search (optional suggestions, user can type freely)
     $('#header_part_search').on('input', function () {
         clearTimeout(partSearchTimeout);
@@ -130,6 +156,7 @@ $(document).ready(function () {
 
         if (query.length < 2) {
             $('#header_part_suggestions').hide().empty();
+            $('#header_part_id').val(''); // Clear part ID when input changes
             return;
         }
 
@@ -147,7 +174,7 @@ $(document).ready(function () {
                     if (parts.length > 0) {
                         parts.forEach(function (part) {
                             $('#header_part_suggestions').append(
-                                `<div class="header-suggestion-item" data-part-name="${part.name}">
+                                `<div class="header-suggestion-item" data-part-id="${part.id}" data-part-name="${part.name}">
                                             <strong>${part.name}</strong>
                                             ${part.description ? '<br><small class="text-muted">' + part.description + '</small>' : ''}
                                         </div>`
@@ -163,9 +190,11 @@ $(document).ready(function () {
     });
 
     // Handle Part Selection (optional - user can also just type and not select)
-    $(document).on('click', '.header-suggestion-item[data-part-name]', function () {
+    $(document).on('click', '.header-suggestion-item[data-part-id]', function () {
+        const partId = $(this).data('part-id');
         const partName = $(this).data('part-name');
         $('#header_part_search').val(partName);
+        $('#header_part_id').val(partId);
         $('#header_part_suggestions').hide();
     });
 
@@ -185,24 +214,76 @@ $(document).ready(function () {
     // Search Button Handler
     $('#header_search_btn').on('click', function () {
         const brandText = $('#header_brand_search').val().trim();
+        let brandId = $('#header_brand_id').val();
         const modelText = $('#header_model_search').val().trim();
+        let modelId = $('#header_model_id').val();
         const partText = $('#header_part_search').val().trim();
+        let partId = $('#header_part_id').val();
 
-        // Build search URL with separate parameters
+        // If brand text exists but no ID, try to find the brand ID
+        if (brandText && !brandId) {
+            // Search for exact brand match in real-time
+            $.ajax({
+                url: '/api/search-brands',
+                data: { q: brandText },
+                async: false, // Make synchronous to wait for result
+                success: function(brands) {
+                    if (brands.length > 0) {
+                        // Try to find exact match first
+                        const exactMatch = brands.find(b => b.name.toLowerCase() === brandText.toLowerCase());
+                        brandId = exactMatch ? exactMatch.id : brands[0].id;
+                        $('#header_brand_id').val(brandId);
+                    }
+                }
+            });
+        }
+
+        // If model text exists but no ID, try to find in allModels array
+        if (modelText && !modelId && allModels.length > 0) {
+            const exactMatch = allModels.find(m => m.name.toLowerCase() === modelText.toLowerCase());
+            if (exactMatch) {
+                modelId = exactMatch.id;
+                $('#header_model_id').val(modelId);
+            }
+        }
+
+        // If part text exists but no ID, try to find the part ID
+        if (partText && !partId) {
+            $.ajax({
+                url: '/api/search-parts',
+                data: { q: partText, lang: 'az' },
+                async: false,
+                success: function(parts) {
+                    if (parts.length > 0) {
+                        const exactMatch = parts.find(p => p.name.toLowerCase() === partText.toLowerCase());
+                        partId = exactMatch ? exactMatch.id : parts[0].id;
+                        $('#header_part_id').val(partId);
+                    }
+                }
+            });
+        }
+
+        // Build search URL with ONLY IDs (cleaner URLs)
         let searchParams = new URLSearchParams();
 
-        if (brandText) {
-            searchParams.append('brand', brandText);
+        // Add only IDs to URL
+        if (brandId) {
+            searchParams.append('brand_id', brandId);
         }
-        if (modelText) {
-            searchParams.append('model', modelText);
+        if (modelId) {
+            searchParams.append('auto_model_id', modelId);
         }
-        if (partText) {
-            searchParams.append('part', partText);
+        if (partId) {
+            searchParams.append('auto_part_id', partId);
+        }
+
+        // If only part name without brand/model/partId, add it as keyword
+        if (partText && !brandId && !modelId && !partId) {
+            searchParams.append('keyword', partText);
         }
 
         // Check if at least one parameter is provided
-        if (brandText || modelText || partText) {
+        if (brandId || modelId || partId || partText) {
             window.location.href = '/search?' + searchParams.toString();
         } else {
             alert('Please enter at least one search term');
@@ -219,43 +300,231 @@ $(document).ready(function () {
 
     // Fill inputs from URL parameters on page load
     const urlParams = new URLSearchParams(window.location.search);
-    const brandParam = urlParams.get('brand');
-    const modelParam = urlParams.get('model');
-    const partParam = urlParams.get('part');
+    const brandIdParam = urlParams.get('brand_id');
+    const modelIdParam = urlParams.get('auto_model_id') || urlParams.get('model_id');
+    const partIdParam = urlParams.get('auto_part_id') || urlParams.get('part_id');
 
-    if (brandParam) {
-        $('#header_brand_search').val(brandParam);
-        // Enable model input if brand is present
-        $('#header_model_search').prop('disabled', false);
+    console.log('URL Parameters:', {
+        brandId: brandIdParam,
+        modelId: modelIdParam,
+        partId: partIdParam
+    });
 
-        // Search for the brand ID to load models
+    // Load brand name from ID
+    if (brandIdParam) {
+        console.log('Loading brand with ID:', brandIdParam);
+        $('#header_brand_id').val(brandIdParam);
         $.ajax({
             url: '/api/search-brands',
-            data: {q: brandParam},
+            data: {id: brandIdParam},
             success: function (brands) {
+                console.log('Brand loaded:', brands);
                 if (brands.length > 0) {
-                    // Find exact match
-                    const brand = brands.find(b => b.name === brandParam) || brands[0];
-                    $('#header_brand_id').val(brand.id);
-                    // Load models for this brand
-                    loadHeaderModels(brand.id);
+                    const brand = brands[0];
+                    $('#header_brand_search').val(brand.name);
+                    $('#header_model_search').prop('disabled', false);
+                    console.log('Brand input filled with:', brand.name);
 
-                    // Set model value after models are loaded
-                    if (modelParam) {
-                        setTimeout(function () {
-                            $('#header_model_search').val(modelParam);
+                    // Load models for this brand
+                    loadHeaderModels(brandIdParam);
+
+                    // If model ID exists, set it after models load
+                    if (modelIdParam) {
+                        setTimeout(function() {
+                            $('#header_model_id').val(modelIdParam);
+                            // Find model name from loaded models
+                            const model = allModels.find(m => m.id == modelIdParam);
+                            if (model) {
+                                $('#header_model_search').val(model.name);
+                                console.log('Model input filled with:', model.name);
+                            }
                         }, 500);
                     }
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Brand load error:', error);
+            }
+        });
+    }
+
+    // Load part name from ID
+    if (partIdParam) {
+        console.log('Loading part with ID:', partIdParam);
+        $('#header_part_id').val(partIdParam);
+        $.ajax({
+            url: '/api/search-parts',
+            data: {id: partIdParam, lang: 'az'},
+            success: function (parts) {
+                console.log('Part loaded:', parts);
+                if (parts.length > 0) {
+                    const part = parts[0];
+                    $('#header_part_search').val(part.name);
+                    console.log('Part input filled with:', part.name);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Part load error:', error);
+            }
+        });
+    }
+
+    // ========================================
+    // AUTO PARTS SEARCH FORM FUNCTIONALITY
+    // Version: 2.0.0
+    // ========================================
+
+    // Brand Autocomplete for Auto Parts Form
+    let autoPartsBrandTimeout;
+    $('#brand_search').on('input', function() {
+        clearTimeout(autoPartsBrandTimeout);
+        const query = $(this).val();
+
+        if (query.length < 2) {
+            $('#brand_suggestions').hide().empty();
+            return;
+        }
+
+        autoPartsBrandTimeout = setTimeout(function() {
+            $.ajax({
+                url: '/api/search-brands',
+                data: { q: query },
+                success: function(brands) {
+                    $('#brand_suggestions').empty();
+
+                    if (brands.length > 0) {
+                        brands.forEach(function(brand) {
+                            $('#brand_suggestions').append(
+                                `<div class="suggestion-item" data-brand-id="${brand.id}" data-brand-name="${brand.name}">
+                                    ${brand.name}
+                                </div>`
+                            );
+                        });
+                        $('#brand_suggestions').show();
+                    } else {
+                        $('#brand_suggestions').hide();
+                    }
+                }
+            });
+        }, 300);
+    });
+
+    // Handle Brand Selection for Auto Parts Form
+    $(document).on('click', '.suggestion-item[data-brand-id]', function() {
+        const brandId = $(this).data('brand-id');
+        const brandName = $(this).data('brand-name');
+
+        $('#brand_search').val(brandName);
+        $('#brand_id').val(brandId);
+        $('#brand_suggestions').hide();
+
+        // Load models for selected brand
+        loadModels(brandId);
+    });
+
+    // Load Models by Brand for Auto Parts Form
+    function loadModels(brandId) {
+        $('#model_select').prop('disabled', true).html('<option value="">Loading...</option>');
+
+        $.ajax({
+            url: '/api/models-by-brand',
+            data: { brand_id: brandId },
+            success: function(models) {
+                $('#model_select').empty().append('<option value="">Select model...</option>');
+
+                if (models.length > 0) {
+                    models.forEach(function(model) {
+                        $('#model_select').append(`<option value="${model.id}" data-model-name="${model.name}">${model.name}</option>`);
+                    });
+                    $('#model_select').prop('disabled', false);
+                } else {
+                    $('#model_select').append('<option value="">No models found</option>');
                 }
             }
         });
     }
-    if (modelParam && !brandParam) {
-        $('#header_model_search').val(modelParam);
-    }
-    if (partParam) {
-        $('#header_part_search').val(partParam);
-    }
+
+    // Handle Model Selection - Update hidden field with model name
+    $('#model_select').on('change', function() {
+        const selectedOption = $(this).find('option:selected');
+        const modelName = selectedOption.data('model-name') || selectedOption.text();
+        $('#model_name').val(modelName);
+    });
+
+    // Auto Part Autocomplete for Auto Parts Form
+    $('#part_search').on('input', function() {
+        clearTimeout(partSearchTimeout);
+        const query = $(this).val();
+
+        if (query.length < 2) {
+            $('#part_suggestions').hide().empty();
+            return;
+        }
+
+        partSearchTimeout = setTimeout(function() {
+            $.ajax({
+                url: '/api/search-parts',
+                data: {
+                    q: query,
+                    lang: $('html').attr('lang') || 'az'
+                },
+                success: function(parts) {
+                    $('#part_suggestions').empty();
+
+                    if (parts.length > 0) {
+                        parts.forEach(function(part) {
+                            $('#part_suggestions').append(
+                                `<div class="suggestion-item" data-part-id="${part.id}" data-part-name="${part.name}">
+                                    <strong>${part.name}</strong>
+                                    ${part.description ? '<br><small class="text-muted">' + part.description + '</small>' : ''}
+                                </div>`
+                            );
+                        });
+                        $('#part_suggestions').show();
+                    } else {
+                        $('#part_suggestions').hide();
+                    }
+                }
+            });
+        }, 300);
+    });
+
+    // Handle Part Selection for Auto Parts Form
+    $(document).on('click', '.suggestion-item[data-part-id]', function() {
+        const partId = $(this).data('part-id');
+        const partName = $(this).data('part-name');
+
+        $('#part_search').val(partName);
+        $('#part_id').val(partId);
+        $('#part_suggestions').hide();
+    });
+
+    // Hide suggestions when clicking outside
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('#brand_search, #brand_suggestions').length) {
+            $('#brand_suggestions').hide();
+        }
+        if (!$(e.target).closest('#part_search, #part_suggestions').length) {
+            $('#part_suggestions').hide();
+        }
+    });
+
+    // Reset Form for Auto Parts Search
+    $('#resetSearchBtn').on('click', function() {
+        $('#autoPartsSearchForm')[0].reset();
+        $('#brand_id, #part_id, #model_name').val('');
+        $('#model_select').prop('disabled', true).html('<option value="">First select a brand...</option>');
+        $('#brand_suggestions, #part_suggestions').hide().empty();
+    });
+
+    // Form Validation for Auto Parts Search
+    $('#autoPartsSearchForm').on('submit', function(e) {
+        if (!$('#brand_id').val() && !$('#model_select').val() && !$('#part_id').val()) {
+            e.preventDefault();
+            alert('Please select at least one search criteria');
+            return false;
+        }
+    });
 });
 
 function show_order_details(order_id) {

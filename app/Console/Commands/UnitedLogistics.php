@@ -58,13 +58,13 @@ class UnitedLogistics extends Command
             }
 
             // Use cURL for the request - api_key in both header AND query string
-            $url = $apiUrl . '/warehouses?api_key=' . urlencode($apiKey);
+            $url = $apiUrl . '/warehouses';
 
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                'api_key: ' . $apiKey,
+                'api-key: ' . $apiKey,
                 'Content-Type: application/json',
             ]);
 
@@ -123,7 +123,7 @@ class UnitedLogistics extends Command
             curl_setopt($ch, CURLOPT_URL, $apiUrl . '/orders');
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                'api_key: ' . $apiKey,
+                'api-key: ' . $apiKey,
                 'Content-Type: application/json',
             ]);
 
@@ -186,7 +186,7 @@ class UnitedLogistics extends Command
             curl_setopt($ch, CURLOPT_URL, $apiUrl . "/parcel-states/{$trackingNumber}");
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                'api_key: ' . $apiKey,
+                'api-key: ' . $apiKey,
                 'Content-Type: application/json',
             ]);
 

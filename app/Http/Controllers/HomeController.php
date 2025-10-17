@@ -806,11 +806,23 @@ class HomeController extends Controller
     public function searchBrands(Request $request)
     {
         $query = $request->get('q');
-        $brands = DB::table('brands')
-            ->where('name', 'LIKE', "%{$query}%")
-            ->orWhere('slug', 'LIKE', "%{$query}%")
-            ->limit(10)
-            ->get(['id', 'name', 'slug', 'logo']);
+        $id = $request->get('id');
+
+        // If ID is provided, get brand by ID
+        if ($id) {
+            $brands = DB::table('brands')
+                ->where('id', $id)
+                ->get(['id', 'name', 'slug', 'logo']);
+        } else {
+            // Search by name or slug (case-insensitive)
+            $brands = DB::table('brands')
+                ->where(function($q) use ($query) {
+                    $q->whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($query) . '%'])
+                      ->orWhereRaw('LOWER(slug) LIKE ?', ['%' . strtolower($query) . '%']);
+                })
+                ->limit(10)
+                ->get(['id', 'name', 'slug', 'logo']);
+        }
 
         return response()->json($brands);
     }
@@ -830,16 +842,34 @@ class HomeController extends Controller
     {
         $lang = $request->get('lang', 'az');
         $query = $request->get('q');
+        $id = $request->get('id');
 
-        $parts = DB::table('auto_parts as ap')
-            ->join('auto_parts_translations as apt', 'ap.id', '=', 'apt.part_id')
-            ->where('apt.lang', $lang)
-            ->where(function($q) use ($query) {
-                $q->where('apt.name', 'LIKE', "%{$query}%")
-                  ->orWhere('apt.search_keywords', 'LIKE', "%{$query}%");
-            })
-            ->limit(20)
-            ->get(['ap.id', 'apt.name', 'apt.description', 'ap.slug']);
+        // If ID is provided, get part by ID
+        if ($id) {
+            $parts = DB::table('auto_parts as ap')
+                ->join('auto_parts_translations as apt', 'ap.id', '=', 'apt.part_id')
+                ->where('apt.lang', $lang)
+                ->where('ap.id', $id)
+                ->get(['ap.id', 'apt.name', 'apt.description', 'ap.slug']);
+        } else {
+            // Bütün dillərdəki search_keywords-də axtarırıq
+            $partIds = DB::table('auto_parts_translations')
+                ->where(function($q) use ($query) {
+                    $q->where('name', 'LIKE', "%{$query}%")
+                      ->orWhere('search_keywords', 'LIKE', "%{$query}%");
+                })
+                ->pluck('part_id')
+                ->unique()
+                ->toArray();
+
+            // Tapılan part_id-ləri seçilmiş dildə qaytarırıq
+            $parts = DB::table('auto_parts as ap')
+                ->join('auto_parts_translations as apt', 'ap.id', '=', 'apt.part_id')
+                ->where('apt.lang', $lang)
+                ->whereIn('ap.id', $partIds)
+                ->limit(20)
+                ->get(['ap.id', 'apt.name', 'apt.description', 'ap.slug']);
+        }
 
         return response()->json($parts);
     }
@@ -847,32 +877,14 @@ class HomeController extends Controller
     public function autoPartsSearch(Request $request)
     {
         $brandId = $request->get('brand_id');
-        $modelId = $request->get('model_id');
-        $partId = $request->get('part_id');
+        $autoModelId = $request->get('model_id');
+        $autoPartId = $request->get('part_id');
 
-        // Bu funksiya product search-ə yönləndirilir
-        // Brand, model və part məlumatları ilə axtarış
-        $searchQuery = '';
-
-        if ($brandId) {
-            $brand = DB::table('brands')->find($brandId);
-            $searchQuery .= $brand->name . ' ';
-        }
-
-        if ($modelId) {
-            $model = DB::table('auto_models')->find($modelId);
-            $searchQuery .= $model->name . ' ';
-        }
-
-        if ($partId) {
-            $lang = app()->getLocale();
-            $part = DB::table('auto_parts_translations')
-                ->where('part_id', $partId)
-                ->where('lang', $lang)
-                ->first();
-            $searchQuery .= $part->name;
-        }
-
-        return redirect()->route('search', ['q' => trim($searchQuery)]);
+        // İD-ləri birbaşa SearchController-ə göndər
+        return redirect()->route('search', [
+            'brand_id' => $brandId,
+            'auto_model_id' => $autoModelId,
+            'auto_part_id' => $autoPartId
+        ]);
     }
 }

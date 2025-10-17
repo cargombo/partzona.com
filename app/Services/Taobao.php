@@ -30,8 +30,11 @@ class Taobao
     : array {
 
         $curl = curl_init();
+        // URL encode the keyword for proper Chinese character handling
+        $encodedKeyword = urlencode($keyword);
+
         curl_setopt_array($curl, [
-            CURLOPT_URL            => "https://amazon.ini.az/taobao-curl/{$keyword}",
+            CURLOPT_URL            => "https://amazon.ini.az/taobao-curl/{$encodedKeyword}",
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_ENCODING       => '',
             CURLOPT_MAXREDIRS      => 10,
@@ -54,8 +57,6 @@ class Taobao
         if ($err) {
             throw new \Exception('cURL Error: ' . $err);
         }
-//        dd(json_decode($response));
-
         return json_decode($response, true) ?: [];
     }
 

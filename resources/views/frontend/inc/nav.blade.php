@@ -217,6 +217,7 @@
                                                    id="header_part_search"
                                                    placeholder="{{ translate('Ehtiyat hissəsi') }}"
                                                    autocomplete="off">
+                                            <input type="hidden" id="header_part_id">
                                             <div id="header_part_suggestions" class="header-suggestions-dropdown"></div>
                                         </div>
                                     </div>

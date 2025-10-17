@@ -1,0 +1,3 @@
+$models = DB::table('auto_models')->whereColumn('name_zh', '=', 'name')->where('name', 'REGEXP', '^[A-Z][a-z]')->skip(1100)->limit(400)->pluck('name');
+echo $models->implode(', ') . "\n";
+exit;

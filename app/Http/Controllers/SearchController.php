@@ -19,58 +19,98 @@ use Illuminate\Support\Str;
 
 class SearchController extends Controller
 {
-    public function index(Request $request, $category_id = null, $brand_id = null,$product_ids = [])
+    public function index(Request $request, $category_id = null, $brand_id = null, $product_ids = [])
     {
-        // Check for separate auto parts search parameters
-        $searchBrand = $request->get('brand');
-        $searchModel = $request->get('model');
-        $searchPart = $request->get('part');
+        // Check for auto parts search parameters (IDs only)
+        $searchBrandId     = $request->get('brand_id');
+        $searchAutoModelId = $request->get('auto_model_id') ?: $request->get('model_id');
+        $searchAutoPartId  = $request->get('auto_part_id') ?: $request->get('part_id');
 
-        // Build query from individual parameters if they exist
-        if ($searchBrand || $searchModel || $searchPart) {
-            $queryParts = array_filter([$searchBrand, $searchModel, $searchPart]);
-            $query = implode(' ', $queryParts);
+        // Get keyword for general search
+        $query = $request->keyword;
+
+        $sort_by                   = $request->sort_by;
+        $min_price                 = intval($request->min_price);
+        $max_price                 = intval($request->max_price);
+        $seller_id                 = $request->seller_id;
+        $selected_attribute_values = [];
+        $colors                    = [];
+        $attributes                = [];
+        $selected_color            = null;
+        $categories                = [];
+        $page                      = $request->get('page', 1);
+
+        // Database-dən axtarış
+        $productsQuery = Product::where('published', 1);
+
+        // Auto parts filter
+        if ($searchBrandId) {
+            $productsQuery->where('brand_id', $searchBrandId);
+        }
+        if ($searchAutoModelId) {
+            $productsQuery->where('auto_model_id', $searchAutoModelId);
+        }
+        if ($searchAutoPartId) {
+            $productsQuery->where('auto_part_id', $searchAutoPartId);
+        }
+        if ($query) {
+            $productsQuery->where(function ($q) use ($query) {
+                $q->where('name', 'LIKE', "%{$query}%")
+                    ->orWhere('tags', 'LIKE', "%{$query}%")
+                    ->orWhereHas('product_translations', function ($q) use ($query) {
+                        $q->where('name', 'LIKE', "%{$query}%");
+                    });
+            });
+        }
+
+        // Category filter
+        if ($category_id) {
+            $productsQuery->where('category_id', $category_id);
+        }
+
+        // Price filter
+        if ($min_price > 0) {
+            $productsQuery->where('unit_price', '>=', $min_price);
+        }
+        if ($max_price > 0) {
+            $productsQuery->where('unit_price', '<=', $max_price);
+        }
+
+        // Sorting
+        switch ($sort_by) {
+            case 'newest':
+                $productsQuery->orderBy('created_at', 'desc');
+                break;
+            case 'oldest':
+                $productsQuery->orderBy('created_at', 'asc');
+                break;
+            case 'price-asc':
+                $productsQuery->orderBy('unit_price', 'asc');
+                break;
+            case 'price-desc':
+                $productsQuery->orderBy('unit_price', 'desc');
+                break;
+            default:
+                $productsQuery->orderBy('id', 'desc');
+                break;
+        }
+
+        $products = $productsQuery->paginate(24);
+        $slug = Str::slug($query ?: 'Products');
+        if ($category_id) {
+            $category = Category::where('id', $category_id)->first();
         } else {
-            $query = $request->keyword;
+            $category = Category::where('slug', $slug)->first();
         }
 
-        $sort_by = $request->sort_by;
-        $min_price = intval($request->min_price);
-        $max_price = intval($request->max_price);
-        $seller_id = $request->seller_id;
-        $selected_attribute_values = array();
-        $colors = [];
-        $attributes = [];
-        $selected_color = null;
-        $categories = [];
-        $page = $request->get('page', 1);
-        $slug = Str::slug($query);
-        if($category_id){
-            $category = Category::where('id',$category_id)->first();
-        }else{
-            $category = Category::where('slug',$slug)->first();
-        }
-
-        if(!$category){
-            $category = new Category();
-            $category->name = $query;
+        if (!$category) {
+            $category       = new Category();
+            $category->name = $query ?: 'Products';
             $category->slug = $slug;
-            $category->deleted_at = now();
-            $category->save();
-        }
-        $products = ScrapeInsertionService::searchAndInsertProducts($category->name,$category->id,$page);
-
-        // Convert to collection and create paginator if products exist
-        if (!empty($products)) {
-            $products = collect($products);
-        } else {
-            $products = collect([]);
         }
 
-        return view('frontend.product_listing', compact('products', 'query', 'category', 'categories', 'category_id', 'brand_id', 'sort_by', 'seller_id', 'min_price', 'max_price', 'attributes', 'selected_attribute_values', 'colors', 'selected_color', 'searchBrand', 'searchModel', 'searchPart'));
-
-
-}
+        return view('frontend.product_listing', compact('products', 'query', 'category', 'categories', 'category_id', 'brand_id', 'sort_by', 'seller_id', 'min_price', 'max_price', 'attributes', 'selected_attribute_values', 'colors', 'selected_color'));
+    }
 
     public function listing(Request $request)
     {
@@ -80,22 +120,22 @@ class SearchController extends Controller
     public function listingByCategory(Request $request, $category_slug)
     {
 
-        $page = $request->get('page',1);
+        $page     = $request->get('page', 1);
         $category = Category::where('slug', $category_slug)->first();
         if ($category != null) {
-            $keyword = "Bir çox Avtomobillər (Maşınlar) üçün: ".$category->category_translations->where('lang','az')->first()->name;
-            $searchData  = ScrapeInsertionService::searchAndInsertProducts($keyword,$category->id,$page);
+            $keyword     = "Bir çox Avtomobillər (Maşınlar) üçün: " . $category->category_translations->where('lang', 'az')->first()->name;
+            $searchData  = ScrapeInsertionService::searchAndInsertProducts($keyword, $category->id, $page);
             $product_ids = isset($searchData['product_ids']) ? $searchData['product_ids'] : [];
-            if(isset($searchData['pagination'])){
+            if (isset($searchData['pagination'])) {
 
                 $category->pagination = $searchData['pagination'];
                 $category->save();
             }
-            if(isset($searchData['totalProducts'])){
+            if (isset($searchData['totalProducts'])) {
                 $request->request->add(['limit' => $searchData['totalProducts']]);
             }
 
-            return $this->index($request, $category->id,null,$product_ids);
+            return $this->index($request, $category->id, null, $product_ids);
         }
         abort(404);
     }
@@ -113,8 +153,8 @@ class SearchController extends Controller
     public function ajax_search(Request $request)
     {
 
-        $keywords = array();
-        $query = $request->search;
+        $keywords = [];
+        $query    = $request->search;
         $products = Product::where('published', 1)->where('name', 'like', '%' . $query . '%')->get();
         foreach ($products as $key => $product) {
             foreach (explode(',', $product->tags) as $key => $tag) {
@@ -145,12 +185,12 @@ class SearchController extends Controller
                         });
                 }
             });
-        $case1 = $query . '%';
-        $case2 = '%' . $query . '%';
+        $case1          = $query . '%';
+        $case2          = '%' . $query . '%';
 
         $products_query->orderByRaw('CASE
-                WHEN name LIKE "'.$case1.'" THEN 1
-                WHEN name LIKE "'.$case2.'" THEN 2
+                WHEN name LIKE "' . $case1 . '" THEN 1
+                WHEN name LIKE "' . $case2 . '" THEN 2
                 ELSE 3
                 END');
         $products = $products_query->limit(5)->get();
@@ -168,7 +208,8 @@ class SearchController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param \Illuminate\Http\Request $request
+     *
      * @return \Illuminate\Http\Response
      */
     public function store(Request $request)
@@ -178,7 +219,7 @@ class SearchController extends Controller
             $search->count = $search->count + 1;
             $search->save();
         } else {
-            $search = new Search;
+            $search        = new Search;
             $search->query = $request->keyword;
             $search->save();
         }

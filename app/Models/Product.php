@@ -40,7 +40,9 @@ class Product extends Model
         'auction_product',
         'digital',
         'scraped_basic_data',
-        'brand_id'
+        'brand_id',
+        'auto_model_id',
+        'auto_part_id'
     ];
 
     protected $casts = [
@@ -161,5 +163,15 @@ class Product extends Model
     public function last_viewed_products()
     {
         return $this->hasMany(LastViewedProduct::class);
+    }
+
+    public function productUpdate()
+    {
+        return $this->hasOne(ProductUpdate::class);
+    }
+
+    public function autoModel()
+    {
+        return $this->belongsTo(AutoModel::class, 'auto_model_id');
     }
 }

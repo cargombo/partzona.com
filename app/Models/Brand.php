@@ -12,7 +12,7 @@ class Brand extends Model
     use PreventDemoModeChanges;
 
     protected $with = ['brand_translations'];
-    protected $fillable = ['name', 'logo', 'slug', 'meta_title', 'top', 'meta_description'];
+    protected $fillable = ['name', 'name_zh', 'logo', 'slug', 'meta_title', 'top', 'meta_description'];
 
     public function getTranslation($field = '', $lang = false)
     {

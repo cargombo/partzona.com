@@ -8,8 +8,11 @@ use App\Models\Color;
 use App\Models\ProductCategory;
 use App\Models\ProductStock;
 use App\Models\ProductTranslation;
+use App\Models\Shop;
+use App\Models\ShopTranslation;
 use App\Models\Upload;
 use App\Services\Amazon;
+use App\Services\OpenAITranslationService;
 use Illuminate\Support\Facades\DB;
 use App\Models\Product;
 use App\Models\Category;
@@ -34,63 +37,231 @@ class ScrapeInsertionService
      *
      * @return array
      */
-    public static function searchAndInsertProducts(string $keyword, $category_id, $page = null)
+    public static function     searchAndInsertProducts(string $keyword, $category_id, $page = null)
     {
         try {
-            $cacheKey = $keyword;
-
-            if ($page && is_numeric($page)) {
-                $cacheKey .= '_page_' . $page;
-            }
-
-            $cachedProducts = Cache::get($cacheKey);
-
-            if ($cachedProducts !== null) {
-                return $cachedProducts;
-            }
-            if ($page && is_numeric($page)) {
-                $searchQuery = "{$keyword}&page={$page}";
-            }
             $searchData = Taobao::scrapeSearch($keyword);
-            $products   = [];
-            if (!isset($searchData['data'])) {
+
+            // Log the search data for debugging
+            \Log::info('Taobao search data', [
+                'keyword' => $keyword,
+                'category_id' => $category_id,
+                'success' => $searchData['success'] ?? false,
+                'data_count' => isset($searchData['data']) ? count($searchData['data']) : 0,
+                'first_item' => isset($searchData['data'][0]) ? [
+                    'itemId' => $searchData['data'][0]['itemId'] ?? null,
+                    'title' => $searchData['data'][0]['title'] ?? null,
+                    'price' => $searchData['data'][0]['price'] ?? null,
+                    'mainImgUrl' => $searchData['data'][0]['mainImgUrl'] ?? null,
+                ] : null,
+            ]);
+
+            $products = [];
+            if (!isset($searchData['data']) || empty($searchData['data'])) {
+                \Log::warning('No data in Taobao response', [
+                    'keyword' => $keyword,
+                    'response' => $searchData
+                ]);
                 return $products;
             }
-            foreach ($searchData['data'] as $data) {
+
+            // Step 1: Collect all Chinese titles for batch translation
+            $chineseTitles = [];
+            $itemsToProcess = [];
+
+            foreach ($searchData['data'] as $index => $data) {
                 if (!isset($data['itemId'])) {
-                    return $products;
+                    \Log::warning('Missing itemId in search data', [
+                        'keyword' => $keyword,
+                        'index' => $index,
+                        'data' => $data
+                    ]);
+                    continue;
                 }
+
+                $title = $data['title'] ?? '';
+                if (empty($title)) {
+                    continue;
+                }
+
+                $chineseTitles[] = $title;
+                $itemsToProcess[] = $data;
+            }
+
+            // Step 2: Translate all titles to 3 languages using OpenAI
+            \Log::info('Starting multi-language batch translation', [
+                'keyword' => $keyword,
+                'titles_count' => count($chineseTitles),
+                'languages' => ['az', 'ru', 'en']
+            ]);
+
+            // Translate ALL titles in batch (efficient - 1 API call for all products)
+            $translatedTitles = OpenAITranslationService::translateBatchMultiLanguage($chineseTitles, ['az', 'ru', 'en']);
+
+            \Log::info('Multi-language batch translation completed', [
+                'keyword' => $keyword,
+                'original_count' => count($chineseTitles),
+                'translated_count' => count($translatedTitles['az'] ?? []),
+                'first_chinese' => $chineseTitles[0] ?? 'N/A',
+                'first_azerbaijani' => $translatedTitles['az'][0] ?? 'N/A',
+                'first_russian' => $translatedTitles['ru'][0] ?? 'N/A',
+                'first_english' => $translatedTitles['en'][0] ?? 'N/A'
+            ]);
+
+            // Step 2.5: Collect unique shop names for translation
+            $uniqueShopNames = [];
+            $shopNameMapping = []; // Map Chinese shop name to index
+            foreach ($itemsToProcess as $data) {
+                $shopName = $data['shopName'] ?? null;
+                if ($shopName && !isset($shopNameMapping[$shopName])) {
+                    $shopNameMapping[$shopName] = count($uniqueShopNames);
+                    $uniqueShopNames[] = $shopName;
+                }
+            }
+
+            // Translate shop names if any exist
+            $translatedShopNames = ['az' => [], 'ru' => [], 'en' => []];
+            if (!empty($uniqueShopNames)) {
+                $translatedShopNames = OpenAITranslationService::translateBatchMultiLanguage($uniqueShopNames, ['az', 'ru', 'en']);
+                \Log::info('Shop names translation completed', [
+                    'shop_count' => count($uniqueShopNames),
+                    'first_shop_chinese' => $uniqueShopNames[0] ?? 'N/A',
+                    'first_shop_azerbaijani' => $translatedShopNames['az'][0] ?? 'N/A'
+                ]);
+            }
+
+            // Step 3: Process each item with its translated titles
+            foreach ($itemsToProcess as $index => $data) {
+                $chineseTitle = $chineseTitles[$index];
+                $azerbaijaniTitle = $translatedTitles['az'][$index] ?? $chineseTitle;
+                $russianTitle = $translatedTitles['ru'][$index] ?? $chineseTitle;
+                $englishTitle = $translatedTitles['en'][$index] ?? $chineseTitle;
 
                 $product = Product::where('scraped_item_id', $data['itemId'])->first();
 
+                $isNewProduct = !$product;
                 if (!$product) {
                     $product = new Product();
                 }
-                $price = 0;
-                if (isset($data['price'])) {
-                    $price = $data['price'];
-                }
 
+                // Extract price and other data from Taobao response
+                $price = isset($data['price']) ? floatval($data['price']) : 0;
+                $originalPrice = isset($data['originalPrice']) ? floatval($data['originalPrice']) : $price;
+                $sales = isset($data['sales']) ? intval($data['sales']) : 0;
+                $sellerCount = isset($data['sellerCount']) ? intval($data['sellerCount']) : 0;
+                $shopName = $data['shopName'] ?? null;
+                $location = $data['location'] ?? null;
 
-                $product->name           = isset($data['title_az']) ? $data['title_az'] : $data['title'];
+                // Use Azerbaijani title as primary name (since this is Azerbaijan market)
+                $product->name           = $azerbaijaniTitle;
                 $product->added_by       = 'admin';
                 $product->user_id        = 11;
                 $product->category_id    = $category_id;
                 $product->unit_price     = $price;
                 $product->purchase_price = $price * 0.8;
+
+                // Calculate discount if original price is higher than current price
+                if ($originalPrice > $price) {
+                    $product->discount = $originalPrice - $price;
+                    $product->discount_type = 'amount';
+                } else {
+                    $product->discount = 0;
+                    $product->discount_type = null;
+                }
+
+                // Set number of sales/views and seller count if available
+                $product->num_of_sale = $sales;
+                $product->seller_count = $sellerCount;
+
+                // Store Taobao item URL if available
+                if (isset($data['itemId'])) {
+                    $product->scraped_item_url = "https://item.taobao.com/item.htm?id=" . $data['itemId'];
+                }
+
+                // Create or get shop and save shop name translations
+                if ($shopName) {
+                    // Find or create shop by Chinese name
+                    $shop = Shop::where('name', $shopName)->first();
+                    if (!$shop) {
+                        $shop = new Shop();
+                        $shop->user_id = 11; // Admin user
+                        $shop->name = $shopName; // Chinese name
+                        $shop->save();
+
+                        // Save translated shop names
+                        $shopNameIndex = $shopNameMapping[$shopName] ?? null;
+                        if ($shopNameIndex !== null && isset($translatedShopNames['az'][$shopNameIndex])) {
+                            foreach (['az', 'ru', 'en'] as $lang) {
+                                $translatedShopName = $translatedShopNames[$lang][$shopNameIndex] ?? $shopName;
+                                ShopTranslation::updateOrCreate(
+                                    ['shop_id' => $shop->id, 'lang' => $lang],
+                                    ['name' => $translatedShopName]
+                                );
+                            }
+                        }
+                    }
+                    // Link product to shop (if products table has shop_id field)
+                    // $product->shop_id = $shop->id;
+                }
+
                 $product->save();
 
-                // Handle image upload
+                // Save translations to product_translations table
+                $languages = [
+                    'az' => $azerbaijaniTitle,
+                    'ru' => $russianTitle,
+                    'en' => $englishTitle
+                ];
+
+                foreach ($languages as $lang => $translatedTitle) {
+                    ProductTranslation::updateOrCreate(
+                        [
+                            'product_id' => $product->id,
+                            'lang' => $lang
+                        ],
+                        [
+                            'name' => $translatedTitle,
+                            'unit' => 'pc',
+                            'description' => null
+                        ]
+                    );
+                }
+
+                \Log::info('Product saved with multi-language translation', [
+                    'keyword' => $keyword,
+                    'is_new' => $isNewProduct,
+                    'product_id' => $product->id,
+                    'item_id' => $data['itemId'],
+                    'chinese_title' => $chineseTitle,
+                    'azerbaijani_title' => $azerbaijaniTitle,
+                    'russian_title' => $russianTitle,
+                    'english_title' => $englishTitle,
+                    'price' => $price,
+                    'original_price' => $originalPrice,
+                    'discount' => $product->discount,
+                    'sales' => $sales,
+                    'shop_name' => $shopName,
+                    'location' => $location,
+                    'category_id' => $category_id,
+                    'taobao_url' => $product->scraped_item_url
+                ]);
+
+                // Handle image upload - Taobao returns mainImgUrl
                 $imageUrl = $data['mainImgUrl'] ?? null;
                 if ($imageUrl) {
-                    $upload = Upload::create([
-                        'file_original_name' => null,
-                        'file_name'          => $imageUrl,
-                        'user_id'            => $product->user_id,
-                        'extension'          => 0,
-                        'type'               => 'image',
-                        'file_size'          => 0
-                    ]);
+                    // Check if this image already exists
+                    $upload = Upload::where('file_name', $imageUrl)->first();
+
+                    if (!$upload) {
+                        $upload = Upload::create([
+                            'file_original_name' => null,
+                            'file_name'          => $imageUrl,
+                            'user_id'            => $product->user_id,
+                            'extension'          => 'jpg',
+                            'type'               => 'image',
+                            'file_size'          => 0
+                        ]);
+                    }
 
                     $product->photos        = $upload->id;
                     $product->thumbnail_img = $upload->id;
@@ -109,11 +280,15 @@ class ScrapeInsertionService
                 $product->seller_featured                  = 0;
                 $product->unit                             = 'pc';
                 $product->current_stock                    = 10;
-                $product->slug                             = \Str::slug(isset($data['title_az']) ? $data['title_az'] : $data['title']);
+                $product->slug                             = \Str::slug($azerbaijaniTitle);
                 $product->frequently_bought_selection_type = 'product';
                 $product->rating                           = $data['rating'] ?? 0;
                 $product->scraped_item_id                  = $data['itemId'];
-                $product->scraped_basic_data               = $data;
+
+                // Save complete Taobao product data as JSON
+                $product->scraped_basic_data               = json_encode($data, JSON_UNESCAPED_UNICODE);
+                $product->scraped_date                     = now();
+
                 $product->save();
                 $product->video_provider  = 'youtube';
                 $product->variant_product = 0;
@@ -123,7 +298,6 @@ class ScrapeInsertionService
                 $products[]               = $product;
 
             }
-            Cache::put($cacheKey, $products, now()->addHours(24));
             return $products;
         }
         catch (\Exception $e) {

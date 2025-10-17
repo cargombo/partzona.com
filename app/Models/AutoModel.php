@@ -14,6 +14,7 @@ class AutoModel extends Model
         'brand_id',
         'auto_model_group_id',
         'name',
+        'name_zh',
         'slug',
         'year_from',
         'year_to',

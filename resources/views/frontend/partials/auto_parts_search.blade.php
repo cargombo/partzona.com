@@ -21,6 +21,7 @@
                         <input type="text"
                                class="field-input"
                                id="brand_search"
+                               name="brand"
                                placeholder="{{ translate('e.g. Mercedes, BMW, Toyota...') }}"
                                autocomplete="off">
                         <input type="hidden" name="brand_id" id="brand_id">
@@ -35,6 +36,7 @@
                     </div>
                     <div class="field-content">
                         <label for="model_select" class="field-label">{{ translate('Car Model') }}</label>
+                        <input type="hidden" name="model" id="model_name">
                         <select class="field-input field-select" name="model_id" id="model_select" disabled>
                             <option value="">{{ translate('First select a brand...') }}</option>
                         </select>
@@ -51,6 +53,7 @@
                         <input type="text"
                                class="field-input"
                                id="part_search"
+                               name="part"
                                placeholder="{{ translate('e.g. Engine Oil, Brake Pad...') }}"
                                autocomplete="off">
                         <input type="hidden" name="part_id" id="part_id">
@@ -329,153 +332,5 @@
 }
 </style>
 
-<script>
-$(document).ready(function() {
-    let brandSearchTimeout;
-    let partSearchTimeout;
-
-    // Brand Autocomplete
-    $('#brand_search').on('input', function() {
-        clearTimeout(brandSearchTimeout);
-        const query = $(this).val();
-
-        if (query.length < 2) {
-            $('#brand_suggestions').hide().empty();
-            return;
-        }
-
-        brandSearchTimeout = setTimeout(function() {
-            $.ajax({
-                url: '{{ route("api.search.brands") }}',
-                data: { q: query },
-                success: function(brands) {
-                    $('#brand_suggestions').empty();
-
-                    if (brands.length > 0) {
-                        brands.forEach(function(brand) {
-                            $('#brand_suggestions').append(
-                                `<div class="suggestion-item" data-brand-id="${brand.id}" data-brand-name="${brand.name}">
-                                    ${brand.name}
-                                </div>`
-                            );
-                        });
-                        $('#brand_suggestions').show();
-                    } else {
-                        $('#brand_suggestions').hide();
-                    }
-                }
-            });
-        }, 300);
-    });
-
-    // Handle Brand Selection
-    $(document).on('click', '.suggestion-item[data-brand-id]', function() {
-        const brandId = $(this).data('brand-id');
-        const brandName = $(this).data('brand-name');
-
-        $('#brand_search').val(brandName);
-        $('#brand_id').val(brandId);
-        $('#brand_suggestions').hide();
-
-        // Load models for selected brand
-        loadModels(brandId);
-    });
-
-    // Load Models by Brand
-    function loadModels(brandId) {
-        $('#model_select').prop('disabled', true).html('<option value="">{{ translate("Loading...") }}</option>');
-
-        $.ajax({
-            url: '{{ route("api.models.by_brand") }}',
-            data: { brand_id: brandId },
-            success: function(models) {
-                $('#model_select').empty().append('<option value="">{{ translate("Select model...") }}</option>');
-
-                if (models.length > 0) {
-                    models.forEach(function(model) {
-                        $('#model_select').append(`<option value="${model.id}">${model.name}</option>`);
-                    });
-                    $('#model_select').prop('disabled', false);
-                } else {
-                    $('#model_select').append('<option value="">{{ translate("No models found") }}</option>');
-                }
-            }
-        });
-    }
-
-    // Auto Part Autocomplete
-    $('#part_search').on('input', function() {
-        clearTimeout(partSearchTimeout);
-        const query = $(this).val();
-
-        if (query.length < 2) {
-            $('#part_suggestions').hide().empty();
-            return;
-        }
-
-        partSearchTimeout = setTimeout(function() {
-            $.ajax({
-                url: '{{ route("api.search.parts") }}',
-                data: {
-                    q: query,
-                    lang: '{{ app()->getLocale() }}'
-                },
-                success: function(parts) {
-                    $('#part_suggestions').empty();
-
-                    if (parts.length > 0) {
-                        parts.forEach(function(part) {
-                            $('#part_suggestions').append(
-                                `<div class="suggestion-item" data-part-id="${part.id}" data-part-name="${part.name}">
-                                    <strong>${part.name}</strong>
-                                    ${part.description ? '<br><small class="text-muted">' + part.description + '</small>' : ''}
-                                </div>`
-                            );
-                        });
-                        $('#part_suggestions').show();
-                    } else {
-                        $('#part_suggestions').hide();
-                    }
-                }
-            });
-        }, 300);
-    });
-
-    // Handle Part Selection
-    $(document).on('click', '.suggestion-item[data-part-id]', function() {
-        const partId = $(this).data('part-id');
-        const partName = $(this).data('part-name');
-
-        $('#part_search').val(partName);
-        $('#part_id').val(partId);
-        $('#part_suggestions').hide();
-    });
-
-    // Hide suggestions when clicking outside
-    $(document).on('click', function(e) {
-        if (!$(e.target).closest('#brand_search, #brand_suggestions').length) {
-            $('#brand_suggestions').hide();
-        }
-        if (!$(e.target).closest('#part_search, #part_suggestions').length) {
-            $('#part_suggestions').hide();
-        }
-    });
-
-    // Reset Form
-    $('#resetSearchBtn').on('click', function() {
-        $('#autoPartsSearchForm')[0].reset();
-        $('#brand_id, #part_id').val('');
-        $('#model_select').prop('disabled', true).html('<option value="">{{ translate("Select model...") }}</option>');
-        $('#brand_suggestions, #part_suggestions').hide().empty();
-    });
-
-    // Form Validation
-    $('#autoPartsSearchForm').on('submit', function(e) {
-        if (!$('#brand_id').val() && !$('#model_select').val() && !$('#part_id').val()) {
-            e.preventDefault();
-            alert('{{ translate("Please select at least one search criteria") }}');
-            return false;
-        }
-    });
-});
-</script>
+{{-- Auto Parts Search JavaScript is loaded from /public/assets/js/search.js --}}
+{{-- Version: 2.0.0 - Updated: 2025-10-16 --}}

@@ -1105,7 +1105,7 @@
         @php
             echo get_setting('footer_script');
         @endphp
-        <script src="/assets/js/search.js?v=1.1"></script>
+        <script src="/assets/js/search.js?v=2.3.0"></script>
         <script>
             // Səhifə yüklənməsi üçün global dəyişənlər
             let pageLoadingOverlay = null;
